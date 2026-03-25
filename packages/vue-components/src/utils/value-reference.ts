@@ -4,6 +4,7 @@
  * A2UI 协议使用 ValueReference 来支持静态值和动态数据绑定
  */
 
+import { computed } from 'vue'
 import type { ValueReference } from '@a2ui/core'
 
 /**
@@ -20,7 +21,10 @@ export function isValueReference(value: unknown): value is ValueReference<unknow
  * @param defaultValue - 当是 ValueReference 时的默认值（因为动态值需要框架处理）
  * @returns 解析后的值
  */
-export function resolveValue<T>(value: T | ValueReference<T>, defaultValue: T): T {
+export function resolveValue<T>(value: T | ValueReference<T> | undefined, defaultValue: T): T {
+  if (value === undefined) {
+    return defaultValue
+  }
   if (isValueReference(value)) {
     // 动态值需要通过 DataModel 处理，这里返回默认值
     // 实际的动态绑定由 useDataModel composable 处理
@@ -32,28 +36,28 @@ export function resolveValue<T>(value: T | ValueReference<T>, defaultValue: T): 
 /**
  * 解析字符串值
  */
-export function resolveStringValue(value: string | ValueReference<string>, defaultValue = ''): string {
+export function resolveStringValue(value: string | ValueReference<string> | undefined, defaultValue = ''): string {
   return resolveValue(value, defaultValue)
 }
 
 /**
  * 解析布尔值
  */
-export function resolveBooleanValue(value: boolean | ValueReference<boolean>, defaultValue = false): boolean {
+export function resolveBooleanValue(value: boolean | ValueReference<boolean> | undefined, defaultValue = false): boolean {
   return resolveValue(value, defaultValue)
 }
 
 /**
  * 解析数值
  */
-export function resolveNumberValue(value: number | ValueReference<number>, defaultValue = 0): number {
+export function resolveNumberValue(value: number | ValueReference<number> | undefined, defaultValue = 0): number {
   return resolveValue(value, defaultValue)
 }
 
 /**
  * 解析数组值
  */
-export function resolveArrayValue<T>(value: T[] | ValueReference<T[]>, defaultValue: T[] = []): T[] {
+export function resolveArrayValue<T>(value: T[] | ValueReference<T[]> | undefined, defaultValue: T[] = []): T[] {
   return resolveValue(value, defaultValue)
 }
 
@@ -63,7 +67,7 @@ export function resolveArrayValue<T>(value: T[] | ValueReference<T[]>, defaultVa
  * 用于需要双向绑定的场景，如表单输入
  */
 export function useValueBinding<T>(
-  props: { value: T | ValueReference<T> },
+  props: { value: T | ValueReference<T> | undefined },
   emit: (event: 'update:value', value: T) => void,
   defaultValue: T
 ) {
@@ -74,6 +78,3 @@ export function useValueBinding<T>(
 
   return currentValue
 }
-
-// 需要从 vue 导入 computed
-import { computed } from 'vue'

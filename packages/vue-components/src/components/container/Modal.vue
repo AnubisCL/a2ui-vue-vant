@@ -1,39 +1,30 @@
 <template>
-  <Teleport to="body">
-    <Transition name="a2ui-modal">
-      <div v-if="isOpen" class="a2ui-modal--overlay" @click="handleBackdropClick">
-        <div
-          class="bg-white rounded shadow-xl max-w-[90vw] max-h-[90vh] flex flex-col"
-          :style="contentStyles"
-          @click.stop
-          role="dialog"
-          aria-modal="true"
-        >
-          <div class="flex justify-between items-center p-4 border-b border-neutral-200">
-            <h2 v-if="title" class="text-xl font-semibold text-neutral-800 m-0">{{ modalTitle }}</h2>
-            <button
-              v-if="showClose"
-              class="bg-none border-none text-xl cursor-pointer text-neutral-600 p-1 -my-1 hover:text-neutral-800 transition-colors leading-none"
-              @click="close"
-              type="button"
-              aria-label="Close"
-            >
-              ✕
-            </button>
-          </div>
+  <van-popup
+    v-model:show="isOpen"
+    :position="vantPosition"
+    :round="true"
+    :closeable="props.showClose"
+    :close-on-click-overlay="props.closeOnBackdropClick"
+    :teleport="'body'"
+    :style="popupStyle"
+    @close="handleClose"
+  >
+    <!-- 标题 -->
+    <div v-if="modalTitle" class="text-lg font-semibold p-4 border-b border-neutral-200">
+      {{ modalTitle }}
+    </div>
 
-          <div class="p-5 overflow-y-auto flex-1">
-            <slot>{{ modalContent }}</slot>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
+    <!-- 内容 -->
+    <div class="p-4 overflow-auto" :style="contentStyle">
+      <slot>{{ modalContent }}</slot>
+    </div>
+  </van-popup>
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import type { ModalProps } from '@a2ui/core'
+import { resolveStringValue, resolveBooleanValue } from '../../utils'
 
 const props = withDefaults(defineProps<ModalProps>(), {
   showClose: true,
@@ -45,84 +36,55 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const contentStyles = computed(() => {
-  const styles: Record<string, string> = {}
+// 解析打开状态
+const isOpen = computed({
+  get: () => resolveBooleanValue(props.open, false),
+  set: (value) => emit('update:open', value),
+})
+
+// 解析标题
+const modalTitle = computed(() => {
+  return resolveStringValue(props.title, '')
+})
+
+// 解析内容
+const modalContent = computed(() => {
+  return resolveStringValue(props.content, '')
+})
+
+// 弹窗位置
+const vantPosition = computed(() => 'center')
+
+// 弹窗样式
+const popupStyle = computed(() => {
+  const style: Record<string, string> = {}
 
   if (props.width) {
-    styles.width = typeof props.width === 'number' ? `${props.width}px` : props.width
+    style.width = typeof props.width === 'number' ? `${props.width}px` : props.width
+  } else {
+    style.width = '80%'
   }
+
+  style.maxWidth = '90vw'
+
+  return style
+})
+
+// 内容区域样式
+const contentStyle = computed(() => {
+  const style: Record<string, string> = {}
 
   if (props.height) {
-    styles.height = typeof props.height === 'number' ? `${props.height}px` : props.height
+    style.maxHeight = typeof props.height === 'number' ? `${props.height}px` : props.height
+  } else {
+    style.maxHeight = '80vh'
   }
 
-  return styles
+  return style
 })
 
-const isOpen = computed({
-  get: () => {
-    return typeof props.open === 'object' && 'path' in props.open ? false : props.open
-  },
-  set: (value) => {
-    emit('update:open', value)
-  },
-})
-
-const modalTitle = computed(() => {
-  return typeof props.title === 'object' && 'path' in props.title ? '' : props.title
-})
-
-const modalContent = computed(() => {
-  return typeof props.content === 'object' && 'path' in props.content ? '' : props.content
-})
-
-const close = () => {
-  isOpen.value = false
+// 关闭事件
+const handleClose = () => {
   emit('close')
 }
-
-const handleBackdropClick = () => {
-  if (props.closeOnBackdropClick) {
-    close()
-  }
-}
-
-// Handle escape key
-watch(isOpen, (newValue) => {
-  if (newValue) {
-    document.addEventListener('keydown', handleKeydown)
-  } else {
-    document.removeEventListener('keydown', handleKeydown)
-  }
-})
-
-const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
-    close()
-  }
-}
 </script>
-
-<style scoped>
-/* Transition */
-.a2ui-modal-enter-active,
-.a2ui-modal-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.a2ui-modal-enter-active > div,
-.a2ui-modal-leave-active > div {
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.a2ui-modal-enter-from,
-.a2ui-modal-leave-to {
-  opacity: 0;
-}
-
-.a2ui-modal-enter-from > div,
-.a2ui-modal-leave-to > div {
-  transform: scale(0.9);
-  opacity: 0;
-}
-</style>

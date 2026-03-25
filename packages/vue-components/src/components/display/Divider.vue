@@ -1,5 +1,11 @@
 <template>
-  <div class="a2ui-divider flex-shrink-0" :class="classes" :style="styles" />
+  <van-divider
+    :dashed="false"
+    :hairline="props.thickness === 1"
+    :style="dividerStyle"
+  >
+    <slot />
+  </van-divider>
 </template>
 
 <script setup lang="ts">
@@ -13,32 +19,16 @@ const props = withDefaults(defineProps<DividerProps>(), {
   margin: 16,
 })
 
-const classes = computed(() => [
-  {
-    'h-0.5': props.orientation === 'horizontal',
-    'w-0.5': props.orientation === 'vertical',
-  },
-])
+// 分隔线样式
+const dividerStyle = computed(() => {
+  const marginValue = Array.isArray(props.margin)
+    ? `${props.margin[0]}px ${props.margin[1]}px ${props.margin[2]}px ${props.margin[3]}px`
+    : `${props.margin}px 0`
 
-const styles = computed(() => {
-  if (props.orientation === 'horizontal') {
-    return {
-      backgroundColor: props.color,
-      margin: marginValue.value,
-    }
-  } else {
-    return {
-      backgroundColor: props.color,
-      margin: marginValue.value,
-    }
+  return {
+    borderColor: props.color,
+    margin: marginValue,
+    borderWidth: props.thickness > 1 ? `${props.thickness}px` : undefined,
   }
-})
-
-const marginValue = computed(() => {
-  if (Array.isArray(props.margin)) {
-    const [top, right, bottom, left] = props.margin
-    return `${top}px ${right}px ${bottom}px ${left}px`
-  }
-  return `${props.margin}px`
 })
 </script>

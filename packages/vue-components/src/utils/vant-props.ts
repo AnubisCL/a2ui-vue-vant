@@ -12,7 +12,6 @@ import type {
   ChoicePickerProps,
   DateTimeInputProps,
   ImageProps,
-  IconProps,
   DividerProps,
   CardProps,
   TabsProps,
@@ -21,8 +20,6 @@ import type {
 import {
   resolveStringValue,
   resolveBooleanValue,
-  resolveNumberValue,
-  isValueReference,
 } from './value-reference'
 
 // ============================================

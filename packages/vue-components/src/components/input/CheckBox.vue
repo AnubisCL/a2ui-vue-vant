@@ -1,19 +1,19 @@
 <template>
-  <label class="a2ui-checkbox inline-flex items-center gap-2" :class="{ 'opacity-60 cursor-not-allowed': isDisabled }">
-    <input
-      type="checkbox"
-      v-model="checkedValue"
-      class="a2ui-checkbox__input"
-      :disabled="isDisabled"
-      @change="handleChange"
-    />
-    <span v-if="label" class="select-none">{{ checkBoxLabel }}</span>
-  </label>
+  <van-checkbox
+    v-model="checkedValue"
+    :disabled="isDisabled"
+    shape="square"
+    :label-disabled="false"
+    @change="handleChange"
+  >
+    {{ checkBoxLabel }}
+  </van-checkbox>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CheckBoxProps } from '@a2ui/core'
+import { resolveStringValue, resolveBooleanValue } from '../../utils'
 
 const props = withDefaults(defineProps<CheckBoxProps>(), {
   disabled: false,
@@ -24,26 +24,31 @@ const emit = defineEmits<{
   (e: 'change', value: boolean): void
 }>()
 
+// 解析禁用状态
 const isDisabled = computed(() => {
-  return typeof props.disabled === 'object' && 'path' in props.disabled
-    ? false
-    : props.disabled
+  return resolveBooleanValue(props.disabled, false)
 })
 
+// 解析标签
 const checkBoxLabel = computed(() => {
-  return typeof props.label === 'object' && 'path' in props.label ? '' : props.label
+  return resolveStringValue(props.label, '')
 })
 
+// 双向绑定
 const checkedValue = computed({
   get: () => {
-    return typeof props.checked === 'object' && 'path' in props.checked ? false : props.checked
+    if (typeof props.checked === 'object' && 'path' in props.checked) {
+      return false
+    }
+    return props.checked
   },
   set: (value) => {
     emit('update:checked', value)
   },
 })
 
-const handleChange = () => {
-  emit('change', checkedValue.value)
+// 变更事件
+const handleChange = (value: boolean) => {
+  emit('change', value)
 }
 </script>

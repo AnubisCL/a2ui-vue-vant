@@ -1,27 +1,31 @@
 <template>
-  <div class="a2ui-textfield flex flex-col gap-1">
-    <label v-if="label" class="text-sm font-medium text-neutral-700">{{ fieldLabel }}</label>
-    <component
-      :is="inputComponent"
-      v-model="inputValue"
-      class="a2ui-textfield__input"
-      :placeholder="placeholderText"
-      :disabled="isDisabled"
-      :readonly="isReadonly"
-      :type="inputType"
-      :min="min"
-      :max="max"
-      :maxlength="maxLength"
-      @change="handleChange"
-      @keydown="handleKeydown"
-    />
-    <span v-if="hint" class="text-xs text-neutral-500">{{ hintText }}</span>
-  </div>
+  <van-field
+    v-model="inputValue"
+    :label="fieldLabel"
+    :placeholder="placeholderText"
+    :disabled="isDisabled"
+    :readonly="isReadonly"
+    :type="vantType"
+    :maxlength="maxLength"
+    :rows="props.type === 'longText' ? 3 : undefined"
+    :autosize="props.type === 'longText'"
+    clearable
+    :error="hasError"
+    :error-message="errorMessage"
+    @update:model-value="handleInput"
+    @change="handleChange"
+    @keypress.enter="handleSubmit"
+  >
+    <template v-if="hintText" #extra>
+      <span class="text-xs text-neutral-500">{{ hintText }}</span>
+    </template>
+  </van-field>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { TextFieldProps } from '@a2ui/core'
+import { resolveStringValue, resolveBooleanValue } from '../../utils'
 
 const props = withDefaults(defineProps<TextFieldProps>(), {
   type: 'shortText',
@@ -35,72 +39,77 @@ const emit = defineEmits<{
   (e: 'submit'): void
 }>()
 
-const inputComponent = computed(() => {
-  return props.type === 'longText' ? 'textarea' : 'input'
-})
+// 错误状态
+const hasError = ref(false)
+const errorMessage = ref('')
 
-const inputType = computed(() => {
-  const typeMap: Record<NonNullable<TextFieldProps['type']>, string> = {
+// 映射 A2UI type 到 Vant type
+const vantType = computed(() => {
+  const map: Record<string, string> = {
     shortText: 'text',
-    longText: 'text',
-    number: 'number',
+    longText: 'textarea',
+    number: 'digit',
     obscured: 'password',
   }
-  return typeMap[props.type]
+  return map[props.type] || 'text'
 })
 
+// 解析标签
 const fieldLabel = computed(() => {
-  return typeof props.label === 'object' && 'path' in props.label ? '' : props.label
+  return resolveStringValue(props.label, '')
 })
 
+// 解析提示
 const hintText = computed(() => {
-  return typeof props.hint === 'object' && 'path' in props.hint ? '' : props.hint
+  return resolveStringValue(props.hint, '')
 })
 
+// 解析占位符
 const placeholderText = computed(() => {
-  return typeof props.placeholder === 'object' && 'path' in props.placeholder ? '' : props.placeholder
+  return resolveStringValue(props.placeholder, '')
 })
 
+// 解析禁用状态
 const isDisabled = computed(() => {
-  return typeof props.disabled === 'object' && 'path' in props.disabled
-    ? false
-    : props.disabled
+  return resolveBooleanValue(props.disabled, false)
 })
 
+// 解析只读状态
 const isReadonly = computed(() => {
-  return typeof props.readonly === 'object' && 'path' in props.readonly
-    ? false
-    : props.readonly
+  return resolveBooleanValue(props.readonly, false)
 })
 
+// 双向绑定
 const inputValue = computed({
   get: () => {
-    return typeof props.value === 'object' && 'path' in props.value ? '' : props.value
+    if (typeof props.value === 'object' && 'path' in props.value) {
+      return ''
+    }
+    return props.value?.toString() ?? ''
   },
-  set: (value) => {
-    emit('update:value', value)
+  set: (val) => {
+    const finalValue = props.type === 'number' ? Number(val) : val
+    emit('update:value', finalValue)
   },
 })
 
+// 输入事件
+const handleInput = (val: string | number) => {
+  // 清除错误状态
+  hasError.value = false
+  errorMessage.value = ''
+}
+
+// 变更事件
 const handleChange = () => {
   emit('change', inputValue.value)
 }
 
-const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter' && props.type !== 'longText') {
+// 提交事件 (Enter 键)
+const handleSubmit = (event: KeyboardEvent) => {
+  // textarea 不触发提交
+  if (props.type !== 'longText') {
     emit('submit')
   }
 }
 </script>
-
-<style scoped>
-.a2ui-textfield__input:deep(:disabled) {
-  background: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.a2ui-textfield--longText :deep(.a2ui-textfield__input) {
-  min-height: 100px;
-  resize: vertical;
-}
-</style>

@@ -1,84 +1,168 @@
 <template>
-  <div class="a2ui-choicepicker flex flex-col gap-1 w-full">
-    <label v-if="label" class="text-sm font-medium text-neutral-700">{{ pickerLabel }}</label>
+  <div class="a2ui-choicepicker">
+    <!-- 标签 -->
+    <div v-if="label" class="text-sm font-medium text-neutral-700 mb-2">
+      {{ pickerLabel }}
+    </div>
 
-    <!-- Dropdown style -->
-    <select
-      v-if="style === 'dropdown'"
-      v-model="selectedValue"
-      class="a2ui-textfield__input"
-      :disabled="isDisabled"
-      :multiple="mode === 'multiple'"
-      @change="handleChange"
+    <!-- Chips 样式 (默认) -->
+    <van-space v-if="style === 'chips'" wrap>
+      <template v-if="mode === 'single'">
+        <van-tag
+          v-for="choice in availableChoices"
+          :key="choice.value"
+          :type="isSelected(choice.value) ? 'primary' : 'default'"
+          :disabled="isDisabled || choice.disabled"
+          size="large"
+          @click="toggleChoice(choice.value)"
+        >
+          <span v-if="choice.icon" class="mr-1">{{ choice.icon }}</span>
+          {{ choice.label }}
+        </van-tag>
+      </template>
+      <template v-else>
+        <van-checkbox-group v-model="multiSelectValue" direction="horizontal">
+          <van-checkbox
+            v-for="choice in availableChoices"
+            :key="choice.value"
+            :name="choice.value"
+            :disabled="isDisabled || choice.disabled"
+            shape="square"
+          >
+            <span v-if="choice.icon" class="mr-1">{{ choice.icon }}</span>
+            {{ choice.label }}
+          </van-checkbox>
+        </van-checkbox-group>
+      </template>
+    </van-space>
+
+    <!-- 下拉选择样式 -->
+    <van-picker-group
+      v-else-if="style === 'dropdown'"
+      :title="pickerLabel"
     >
-      <option v-for="choice in availableChoices" :key="choice.value" :value="choice.value">
-        {{ choice.label }}
-      </option>
-    </select>
-
-    <!-- Chips style -->
-    <div v-else-if="style === 'chips'" class="flex flex-wrap gap-2">
-      <label
-        v-for="choice in availableChoices"
-        :key="choice.value"
-        :class="{ 'a2ui-choicepicker__chip--selected': isSelected(choice.value) }"
-        class="a2ui-choicepicker__chip"
-      >
-        <input
-          type="checkbox"
-          :checked="isSelected(choice.value)"
-          :disabled="isDisabled || choice.disabled"
-          @change="toggleChoice(choice.value)"
+      <template v-if="mode === 'single'">
+        <van-cell
+          is-link
+          :title="selectedChoiceLabel"
+          @click="showPicker = true"
         />
-        <span v-if="choice.icon" class="inline-flex items-center">{{ choice.icon }}</span>
-        <span>{{ choice.label }}</span>
-      </label>
-    </div>
-
-    <!-- List style -->
-    <div v-else-if="style === 'list'" class="flex flex-col gap-1">
-      <label
-        v-for="choice in availableChoices"
-        :key="choice.value"
-        :class="{ 'bg-primary/10 border-primary': isSelected(choice.value) }"
-        class="flex items-start gap-2 p-2 border border-neutral-200 rounded cursor-pointer transition-all hover:bg-neutral-100"
-      >
-        <input
-          :type="mode === 'multiple' ? 'checkbox' : 'radio'"
-          :checked="isSelected(choice.value)"
-          :disabled="isDisabled || choice.disabled"
-          @change="toggleChoice(choice.value)"
+        <van-popup v-model:show="showPicker" position="bottom" round>
+          <van-picker
+            :columns="pickerColumns"
+            @confirm="onPickerConfirm"
+            @cancel="showPicker = false"
+          />
+        </van-popup>
+      </template>
+      <template v-else>
+        <van-cell
+          is-link
+          :title="selectedChoiceLabels"
+          @click="showPicker = true"
         />
-        <span class="flex flex-col gap-0.5">
-          <span class="font-medium">{{ choice.label }}</span>
-          <span v-if="choice.description" class="text-sm text-neutral-500">{{ choice.description }}</span>
-        </span>
-      </label>
-    </div>
+        <van-popup v-model:show="showPicker" position="bottom" round>
+          <van-checkbox-group v-model="multiSelectValue">
+            <van-cell-group>
+              <van-cell
+                v-for="choice in availableChoices"
+                :key="choice.value"
+                clickable
+                :title="choice.label"
+                @click="toggleMultiChoice(choice.value)"
+              >
+                <template #right-icon>
+                  <van-checkbox :name="choice.value" :disabled="choice.disabled" />
+                </template>
+              </van-cell>
+            </van-cell-group>
+          </van-checkbox-group>
+        </van-popup>
+      </template>
+    </van-picker-group>
 
-    <!-- Buttons style -->
-    <div v-else-if="style === 'buttons'" class="flex flex-wrap gap-2">
-      <button
-        v-for="choice in availableChoices"
-        :key="choice.value"
-        :class="{ 'bg-primary text-white border-primary': isSelected(choice.value) }"
-        class="inline-flex items-center gap-1.5 px-4 py-2 border border-neutral-300 rounded bg-white cursor-pointer transition-all text-base font-normal"
-        :disabled="isDisabled || choice.disabled"
-        @click="toggleChoice(choice.value)"
-        type="button"
-      >
-        <span v-if="choice.icon">{{ choice.icon }}</span>
-        <span>{{ choice.label }}</span>
-      </button>
-    </div>
+    <!-- 列表样式 -->
+    <van-radio-group
+      v-else-if="style === 'list' && mode === 'single'"
+      v-model="singleSelectValue"
+    >
+      <van-cell-group>
+        <van-cell
+          v-for="choice in availableChoices"
+          :key="choice.value"
+          clickable
+          :title="choice.label"
+          :label="choice.description"
+          @click="singleSelectValue = choice.value"
+        >
+          <template #right-icon>
+            <van-radio :name="choice.value" :disabled="choice.disabled" />
+          </template>
+        </van-cell>
+      </van-cell-group>
+    </van-radio-group>
+    <van-checkbox-group
+      v-else-if="style === 'list' && mode === 'multiple'"
+      v-model="multiSelectValue"
+    >
+      <van-cell-group>
+        <van-cell
+          v-for="choice in availableChoices"
+          :key="choice.value"
+          clickable
+          :title="choice.label"
+          :label="choice.description"
+          @click="toggleMultiChoice(choice.value)"
+        >
+          <template #right-icon>
+            <van-checkbox :name="choice.value" :disabled="choice.disabled" />
+          </template>
+        </van-cell>
+      </van-cell-group>
+    </van-checkbox-group>
 
-    <span v-if="hint" class="text-xs text-neutral-500">{{ hintText }}</span>
+    <!-- 按钮样式 -->
+    <van-space v-else-if="style === 'buttons'" wrap>
+      <template v-if="mode === 'single'">
+        <van-radio-group v-model="singleSelectValue" direction="horizontal">
+          <van-radio
+            v-for="choice in availableChoices"
+            :key="choice.value"
+            :name="choice.value"
+            :disabled="isDisabled || choice.disabled"
+          >
+            <span v-if="choice.icon">{{ choice.icon }}</span>
+            {{ choice.label }}
+          </van-radio>
+        </van-radio-group>
+      </template>
+      <template v-else>
+        <van-checkbox-group v-model="multiSelectValue" direction="horizontal">
+          <van-checkbox
+            v-for="choice in availableChoices"
+            :key="choice.value"
+            :name="choice.value"
+            :disabled="isDisabled || choice.disabled"
+            shape="square"
+          >
+            <span v-if="choice.icon">{{ choice.icon }}</span>
+            {{ choice.label }}
+          </van-checkbox>
+        </van-checkbox-group>
+      </template>
+    </van-space>
+
+    <!-- 提示文字 -->
+    <div v-if="hint" class="text-xs text-neutral-500 mt-1">
+      {{ hintText }}
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import type { ChoicePickerProps, Choice } from '@a2ui/core'
+import { resolveStringValue, resolveBooleanValue, resolveArrayValue } from '../../utils'
 
 const props = withDefaults(defineProps<ChoicePickerProps>(), {
   mode: 'single',
@@ -91,61 +175,113 @@ const emit = defineEmits<{
   (e: 'change', value: string | string[]): void
 }>()
 
+// Picker 弹出框状态
+const showPicker = ref(false)
+
+// 解析标签
 const pickerLabel = computed(() => {
-  return typeof props.label === 'object' && 'path' in props.label ? '' : props.label
+  return resolveStringValue(props.label, '')
 })
 
+// 解析提示
 const hintText = computed(() => {
-  return typeof props.hint === 'object' && 'path' in props.hint ? '' : props.hint
+  return resolveStringValue(props.hint, '')
 })
 
+// 解析禁用状态
 const isDisabled = computed(() => {
-  return typeof props.disabled === 'object' && 'path' in props.disabled
-    ? false
-    : props.disabled
+  return resolveBooleanValue(props.disabled, false)
 })
 
+// 解析选项列表
 const availableChoices = computed((): Choice[] => {
-  return typeof props.choices === 'object' && 'path' in props.choices ? [] : props.choices
+  return resolveArrayValue(props.choices, [])
 })
 
-const selectedValue = computed({
+// Picker 列格式
+const pickerColumns = computed(() => {
+  return availableChoices.value.map(choice => ({
+    text: choice.label,
+    value: choice.value,
+  }))
+})
+
+// 单选值
+const singleSelectValue = computed({
   get: () => {
-    const value = typeof props.value === 'object' && 'path' in props.value ? undefined : props.value
-    if (props.mode === 'multiple') {
-      return Array.isArray(value) ? value : []
+    if (typeof props.value === 'object' && 'path' in props.value) {
+      return ''
     }
-    return value ?? ''
+    const val = props.value
+    return Array.isArray(val) ? val[0] || '' : val
   },
-  set: (value) => {
+  set: (value: string) => {
     emit('update:value', value)
+    emit('change', value)
   },
 })
 
+// 多选值
+const multiSelectValue = computed({
+  get: () => {
+    if (typeof props.value === 'object' && 'path' in props.value) {
+      return []
+    }
+    const val = props.value
+    return Array.isArray(val) ? val : []
+  },
+  set: (value: string[]) => {
+    emit('update:value', value)
+    emit('change', value)
+  },
+})
+
+// 判断是否选中
 const isSelected = (choiceValue: string): boolean => {
-  const current = selectedValue.value
   if (props.mode === 'multiple') {
-    return Array.isArray(current) && current.includes(choiceValue)
+    return multiSelectValue.value.includes(choiceValue)
   }
-  return current === choiceValue
+  return singleSelectValue.value === choiceValue
 }
 
+// 切换选择
 const toggleChoice = (choiceValue: string) => {
   if (props.mode === 'multiple') {
-    const current = Array.isArray(selectedValue.value) ? selectedValue.value : []
-    const index = current.indexOf(choiceValue)
-    if (index > -1) {
-      emit('update:value', current.filter((v) => v !== choiceValue))
-    } else {
-      emit('update:value', [...current, choiceValue])
-    }
+    toggleMultiChoice(choiceValue)
   } else {
-    emit('update:value', choiceValue)
+    singleSelectValue.value = choiceValue
   }
-  emit('change', selectedValue.value)
 }
 
-const handleChange = () => {
-  emit('change', selectedValue.value)
+// 切换多选项
+const toggleMultiChoice = (choiceValue: string) => {
+  const current = [...multiSelectValue.value]
+  const index = current.indexOf(choiceValue)
+  if (index > -1) {
+    current.splice(index, 1)
+  } else {
+    current.push(choiceValue)
+  }
+  multiSelectValue.value = current
 }
+
+// Picker 确认
+const onPickerConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
+  singleSelectValue.value = selectedValues[0]
+  showPicker.value = false
+}
+
+// 当前选中项的标签 (单选)
+const selectedChoiceLabel = computed(() => {
+  const selected = availableChoices.value.find(c => c.value === singleSelectValue.value)
+  return selected?.label || '请选择'
+})
+
+// 当前选中项的标签 (多选)
+const selectedChoiceLabels = computed(() => {
+  const labels = multiSelectValue.value
+    .map(v => availableChoices.value.find(c => c.value === v)?.label)
+    .filter(Boolean)
+  return labels.length > 0 ? labels.join(', ') : '请选择'
+})
 </script>

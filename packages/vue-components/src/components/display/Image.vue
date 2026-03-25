@@ -1,66 +1,68 @@
 <template>
-  <img
-    class="a2ui-image block max-w-full transition-all"
-    :class="classes"
+  <van-image
     :src="imageSrc"
     :alt="altText"
+    :width="imageWidth"
+    :height="imageHeight"
+    :fit="vantFit"
+    :radius="borderRadius"
+    lazy-load
     @click="handleClick"
-  />
+  >
+    <template #error>
+      <div class="flex items-center justify-center w-full h-full bg-neutral-100 text-neutral-400">
+        <van-icon name="photo-o" size="32" />
+      </div>
+    </template>
+    <template #loading>
+      <van-loading type="spinner" size="20" />
+    </template>
+  </van-image>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ImageProps } from '@a2ui/core'
+import { resolveStringValue } from '../../utils'
 
-const props = withDefaults(
-  defineProps<ImageProps>(),
-  {
-    fit: 'cover',
-    borderRadius: 0,
-  }
-)
+const props = withDefaults(defineProps<ImageProps>(), {
+  fit: 'cover',
+  borderRadius: 0,
+})
 
 const emit = defineEmits<{
   (e: 'click', event: MouseEvent): void
 }>()
 
-const classes = computed(() => [
-  // Width
-  widthClass.value,
-  // Height
-  heightClass.value,
-  // Object fit
-  {
-    'object-cover': props.fit === 'cover',
-    'object-contain': props.fit === 'contain',
-    'object-fill': props.fit === 'fill',
-    'object-none': props.fit === 'none',
-  },
-  // Border radius
-  `rounded-[${props.borderRadius}px]`,
-  // Cursor
-  { 'cursor-pointer': props.onClick },
-])
-
+// 解析图片源
 const imageSrc = computed(() => {
-  return typeof props.src === 'object' && 'path' in props.src ? '' : props.src
+  return resolveStringValue(props.src, '')
 })
 
+// 解析 alt 文本
 const altText = computed(() => {
-  if (!props.alt) return ''
-  return typeof props.alt === 'object' && 'path' in props.alt ? '' : props.alt
+  return resolveStringValue(props.alt, '')
 })
 
-const widthClass = computed(() => {
-  if (!props.width) return ''
-  return typeof props.width === 'number' ? `w-[${props.width}px]` : `w-[${props.width}]`
+// 图片宽度
+const imageWidth = computed(() => {
+  if (!props.width) return undefined
+  return typeof props.width === 'number' ? `${props.width}px` : props.width
 })
 
-const heightClass = computed(() => {
-  if (!props.height) return ''
-  return typeof props.height === 'number' ? `h-[${props.height}px]` : `h-[${props.height}]`
+// 图片高度
+const imageHeight = computed(() => {
+  if (!props.height) return undefined
+  return typeof props.height === 'number' ? `${props.height}px` : props.height
 })
 
+// 映射 fit 属性到 Vant
+const vantFit = computed(() => {
+  const validFits = ['contain', 'cover', 'fill', 'none', 'scale-down'] as const
+  return validFits.includes(props.fit as any) ? (props.fit as typeof validFits[number]) : 'cover'
+})
+
+// 点击事件
 const handleClick = (event: MouseEvent) => {
   if (props.onClick) {
     emit('click', event)

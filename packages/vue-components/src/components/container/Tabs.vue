@@ -1,30 +1,38 @@
 <template>
-  <div :class="classes" :data-position="position">
-    <div class="flex gap-1 border-b border-neutral-200 bg-neutral-50" role="tablist">
-      <button
-        v-for="tab in availableTabs"
-        :key="tab.id"
-        :class="tabClasses(tab)"
-        :disabled="tab.disabled"
-        @click="selectTab(tab.id)"
-        role="tab"
-        :aria-selected="isActive(tab.id)"
-        type="button"
-      >
-        <span v-if="tab.icon" class="inline-flex items-center">{{ tab.icon }}</span>
-        <span>{{ tab.label }}</span>
-      </button>
-    </div>
-
-    <div class="p-4 flex-1">
-      <slot />
-    </div>
-  </div>
+  <van-tabs
+    v-model:active="activeTab"
+    :sticky="false"
+    :swipeable="true"
+    :animated="true"
+    :tab-position="vantPosition"
+    @change="handleTabChange"
+  >
+    <van-tab
+      v-for="tab in availableTabs"
+      :key="tab.id"
+      :name="tab.id"
+      :disabled="tab.disabled"
+      :title="tab.label"
+    >
+      <template #title>
+        <div class="flex items-center gap-1">
+          <van-icon v-if="tab.icon" :name="tab.icon" size="16" />
+          <span>{{ tab.label }}</span>
+        </div>
+      </template>
+      <div class="p-4">
+        <slot :name="tab.id">
+          <slot />
+        </slot>
+      </div>
+    </van-tab>
+  </van-tabs>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { TabsProps, Tab } from '@a2ui/core'
+import { resolveStringValue, resolveArrayValue } from '../../utils'
 
 const props = withDefaults(defineProps<TabsProps>(), {
   position: 'top',
@@ -35,61 +43,43 @@ const emit = defineEmits<{
   (e: 'change', value: string): void
 }>()
 
-const classes = computed(() => [
-  'a2ui-tabs flex flex-col w-full',
-  `a2ui-tabs--${props.position}`,
-])
-
+// 解析选项卡列表
 const availableTabs = computed((): Tab[] => {
-  return typeof props.tabs === 'object' && 'path' in props.tabs ? [] : props.tabs
+  return resolveArrayValue(props.tabs, [])
 })
 
-const tabValue = computed({
+// 当前激活的选项卡
+const activeTab = computed({
   get: () => {
-    return typeof props.value === 'object' && 'path' in props.value ? '' : props.value
+    if (typeof props.value === 'object' && 'path' in props.value) {
+      return availableTabs.value[0]?.id || ''
+    }
+    return props.value
   },
-  set: (value) => {
+  set: (value: string) => {
     emit('update:value', value)
   },
 })
 
-const isActive = (tabId: string): boolean => {
-  return tabValue.value === tabId
-}
-
-const tabClasses = (tab: Tab) => [
-  'a2ui-tabs__tab',
-  {
-    'a2ui-tabs__tab--active': isActive(tab.id),
-    'opacity-50 cursor-not-allowed': tab.disabled,
-  },
-]
-
-const selectTab = (tabId: string) => {
-  const tab = availableTabs.value.find((t) => t.id === tabId)
-  if (tab && !tab.disabled) {
-    emit('update:value', tabId)
-    emit('change', tabId)
+// 映射位置到 Vant
+const vantPosition = computed(() => {
+  const map: Record<string, 'top' | 'bottom' | 'left' | 'right'> = {
+    top: 'top',
+    bottom: 'bottom',
+    left: 'left',
+    right: 'right',
   }
+  return map[props.position] || 'top'
+})
+
+// 处理选项卡切换
+const handleTabChange = ({ name }: { name: string | number }) => {
+  emit('change', String(name))
 }
 </script>
 
 <style scoped>
-.a2ui-tabs--left,
-.a2ui-tabs--right {
-  flex-direction: row;
-}
-
-.a2ui-tabs--left .a2ui-tabs__list,
-.a2ui-tabs--right .a2ui-tabs__list {
-  flex-direction: column;
-  border-bottom: none;
-  border-right: 1px solid #e0e0e0;
-}
-
-.a2ui-tabs--right .a2ui-tabs__list {
-  border-right: none;
-  border-left: 1px solid #e0e0e0;
-  order: 1;
+.van-tabs {
+  width: 100%;
 }
 </style>
