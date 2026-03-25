@@ -1,0 +1,12 @@
+/* UnoCSS Virtual Module */
+@unocss-import
+
+/* Custom A2UI Styles */
+:root {
+  --a2ui-color-primary: #0066cc;
+  --a2ui-color-primary-dark: #0052a3;
+  --a2ui-color-secondary: #666666;
+  --a2ui-color-success: #10b981;
+  --a2ui-color-warning: #f59e0b;
+  --a2ui-color-danger: #dc3545;
+}

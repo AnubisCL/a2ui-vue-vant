@@ -1,0 +1,56 @@
+{
+  "name": "a2ui-vue",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A2UI Vue SDK - Agent to UI declarative UI protocol implementation for Vue 3",
+  "scripts": {
+    "dev": "pnpm --filter dev dev",
+    "build": "pnpm -r --filter './packages/**' build",
+    "build:core": "pnpm --filter @a2ui/core build",
+    "build:vue-components": "pnpm --filter @a2ui/vue-components build",
+    "build:vue-plugin": "pnpm --filter @a2ui/vue-plugin build",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r test:unit",
+    "test:component": "pnpm -r test:component",
+    "test:e2e": "pnpm --filter dev test:e2e",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
+    "format": "prettier --write \"**/*.{ts,tsx,vue,json,md}\"",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean && rm -rf node_modules",
+    "preinstall": "npx only-allow pnpm"
+  },
+  "keywords": [
+    "a2ui",
+    "agent-to-ui",
+    "vue",
+    "vue3",
+    "ai",
+    "agent",
+    "declarative-ui"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vue/test-utils": "^2.4.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-vue": "^9.20.0",
+    "only-allow": "^1.2.1",
+    "prettier": "^3.2.0",
+    "typescript": "~5.3.3",
+    "unocss": "^66.6.6",
+    "unocss-preset-weapp": "^66.0.2",
+    "vite": "^5.0.0",
+    "vitest": "^1.2.0",
+    "vue": "^3.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

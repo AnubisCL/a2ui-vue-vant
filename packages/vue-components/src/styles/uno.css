@@ -1,0 +1,241 @@
+/* Main UnoCSS entry point for A2UI Components */
+@unocss/import;
+
+/* A2UI Global Styles */
+:root {
+  --a2ui-color-primary: #0066cc;
+  --a2ui-color-primary-dark: #0052a3;
+  --a2ui-color-secondary: #666666;
+  --a2ui-color-success: #10b981;
+  --a2ui-color-warning: #f59e0b;
+  --a2ui-color-danger: #dc3545;
+  --a2ui-color-info: #3b82f6;
+  --a2ui-color-border: #e0e0e0;
+  --a2ui-color-bg: #ffffff;
+  --a2ui-color-text: #333333;
+  --a2ui-color-text-light: #666666;
+  --a2ui-color-bg-hover: #f5f5f5;
+
+  --a2ui-spacing-xs: 4px;
+  --a2ui-spacing-sm: 8px;
+  --a2ui-spacing-md: 12px;
+  --a2ui-spacing-lg: 16px;
+  --a2ui-spacing-xl: 20px;
+  --a2ui-spacing-2xl: 24px;
+
+  --a2ui-radius-sm: 4px;
+  --a2ui-radius-base: 6px;
+  --a2ui-radius-md: 8px;
+  --a2ui-radius-lg: 12px;
+
+  --a2ui-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --a2ui-shadow-base: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --a2ui-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --a2ui-shadow-elevated: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Reset and base styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* A2UI Component Base Styles */
+.a2ui-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.a2ui-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.a2ui-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Button Component */
+.a2ui-button {
+  @apply a2ui-btn-base;
+  font-weight: 500;
+  user-select: none;
+}
+
+.a2ui-button:disabled {
+  cursor: not-allowed;
+  opacity: 60%;
+}
+
+.a2ui-button--small {
+  @apply px-3 py-1.5 text-sm;
+}
+
+.a2ui-button--medium {
+  @apply px-4 py-2 text-base;
+}
+
+.a2ui-button--large {
+  @apply px-6 py-3 text-lg;
+}
+
+.a2ui-button--primary {
+  @apply bg-primary text-white;
+}
+
+.a2ui-button--primary:hover:not(:disabled) {
+  @apply bg-primary-dark;
+}
+
+.a2ui-button--secondary {
+  @apply bg-neutral-100 text-neutral-700;
+}
+
+.a2ui-button--secondary:hover:not(:disabled) {
+  @apply bg-neutral-200;
+}
+
+.a2ui-button--borderless {
+  @apply bg-transparent text-primary;
+}
+
+.a2ui-button--borderless:hover:not(:disabled) {
+  @apply bg-primary/10;
+}
+
+.a2ui-button--danger {
+  @apply bg-danger text-white;
+}
+
+.a2ui-button--danger:hover:not(:disabled) {
+  @apply bg-red-700;
+}
+
+/* Input Components */
+.a2ui-textfield {
+  @apply flex flex-col gap-1 w-full;
+}
+
+.a2ui-textfield__input {
+  @apply px-3 py-2 border border-neutral-300 rounded text-base transition-colors;
+  font-family: inherit;
+}
+
+.a2ui-textfield__input:focus {
+  @apply outline-none border-primary;
+}
+
+.a2ui-textfield__input:disabled {
+  @apply bg-neutral-100 cursor-not-allowed;
+}
+
+.a2ui-checkbox {
+  @apply inline-flex items-center gap-2 cursor-pointer user-select-none;
+}
+
+.a2ui-checkbox:has(input:disabled) {
+  @apply cursor-not-allowed opacity-60;
+}
+
+.a2ui-checkbox__input {
+  @apply w-4.5 h-4.5 cursor-pointer accent-primary;
+}
+
+.a2ui-choicepicker__chip {
+  @apply inline-flex items-center gap-1 px-3 py-1.5 border border-neutral-300 rounded-full cursor-pointer transition-all;
+  user-select: none;
+}
+
+.a2ui-choicepicker__chip:hover:not(:disabled) {
+  @apply border-primary;
+}
+
+.a2ui-choicepicker__chip--selected {
+  @apply bg-primary text-white border-primary;
+}
+
+.a2ui-choicepicker__chip input {
+  @apply hidden;
+}
+
+.a2ui-slider__input {
+  @apply w-full h-1.5 bg-neutral-200 rounded-full outline-none transition-all appearance-none;
+}
+
+.a2ui-slider__input::-webkit-slider-thumb {
+  @apply appearance-none w-4.5 h-4.5 rounded-full bg-primary cursor-pointer transition-all;
+}
+
+.a2ui-slider__input:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+/* Card Component */
+.a2ui-card {
+  @apply a2ui-card-base;
+}
+
+.a2ui-card--elevated {
+  @apply shadow-elevated;
+}
+
+/* Modal Component */
+.a2ui-modal--overlay {
+  @apply fixed top-0 left-0 right-0 bottom-0;
+}
+
+/* Tabs Component */
+.a2ui-tabs__tab {
+  @apply inline-flex items-center gap-1.5 px-4 py-2.5 border-none bg-transparent cursor-pointer;
+  font-size: 1rem;
+  font-family: inherit;
+  color: #666;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.a2ui-tabs__tab:hover:not(:disabled) {
+  @apply text-neutral-700 bg-neutral-100;
+}
+
+.a2ui-tabs__tab--active {
+  @apply text-primary font-medium;
+  border-bottom: 2px solid currentColor;
+}
+
+.a2ui-tabs__tab:disabled {
+  @apply cursor-not-allowed opacity-50;
+}
+
+/* Markdown content styles */
+.a2ui-text :deep(h1),
+.a2ui-text :deep(h2),
+.a2ui-text :deep(h3),
+.a2ui-text :deep(h4),
+.a2ui-text :deep(h5),
+.a2ui-text :deep(h6) {
+  @apply mt-4 mb-0.5 font-semibold;
+}
+
+.a2ui-text :deep(p) {
+  @apply mb-0.5;
+}
+
+.a2ui-text :deep(a) {
+  @apply text-primary underline;
+}
+
+.a2ui-text :deep(code) {
+  @apply bg-neutral-100 px-0.5 py-0 rounded font-mono text-sm;
+}
+
+.a2ui-text :deep(pre) {
+  @apply bg-neutral-100 p-4 rounded overflow-x-auto;
+}
+
+.a2ui-text :deep(ul),
+.a2ui-text :deep(ol) {
+  @apply pl-7.5 mb-0.5;
+}
