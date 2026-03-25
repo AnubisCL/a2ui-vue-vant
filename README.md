@@ -26,6 +26,95 @@ A2UI is Google's declarative UI protocol for AI Agent to user interaction. This 
 | `@a2ui/vue-plugin` | Vue plugin for easy integration |
 | `@a2ui/dev` | Development and example app |
 
+## Directory Structure
+
+```
+a2ui-vue/
+├── packages/                    # Monorepo packages
+│   ├── core/                    # @a2ui/core - Core SDK
+│   │   ├── src/
+│   │   │   ├── parser/          # Message parser
+│   │   │   │   ├── message-parser.ts
+│   │   │   │   └── parser.ts
+│   │   │   ├── registry/        # Component registry
+│   │   │   │   ├── component-registry.ts
+│   │   │   │   └── catalog-validator.ts
+│   │   │   ├── store/           # Data store
+│   │   │   │   ├── data-model-store.ts
+│   │   │   │   ├── json-pointer.ts
+│   │   │   │   └── store.ts
+│   │   │   ├── surface/         # Surface management
+│   │   │   │   ├── surface-manager.ts
+│   │   │   │   └── surface.ts
+│   │   │   ├── tree-builder/    # Component tree builder
+│   │   │   │   └── tree-builder.ts
+│   │   │   ├── types/           # TypeScript type definitions
+│   │   │   │   ├── components.ts   # Component Props types
+│   │   │   │   ├── messages.ts     # Message types
+│   │   │   │   └── ...
+│   │   │   └── index.ts
+│   │   └── package.json
+│   │
+│   ├── vue-components/          # @a2ui/vue-components - Vue components
+│   │   ├── src/
+│   │   │   ├── components/      # Component implementations
+│   │   │   │   ├── common/      # Common components (Badge, Tag, Progress...)
+│   │   │   │   ├── container/   # Container components (Card, Tabs, Modal)
+│   │   │   │   ├── display/     # Display components (Text, Image, Icon...)
+│   │   │   │   ├── input/       # Input components (Button, TextField...)
+│   │   │   │   └── layout/      # Layout components (Row, Column, List)
+│   │   │   ├── composables/     # Vue Composables
+│   │   │   │   ├── useA2UI.ts      # Main entry composable
+│   │   │   │   ├── useSurface.ts
+│   │   │   │   ├── useDataModel.ts
+│   │   │   │   └── useComponentRegistry.ts
+│   │   │   ├── utils/           # Utility functions
+│   │   │   │   ├── vant-props.ts    # Vant Props mapping
+│   │   │   │   └── value-reference.ts
+│   │   │   ├── styles/          # Style files
+│   │   │   └── index.ts
+│   │   └── package.json
+│   │
+│   ├── vue-plugin/              # @a2ui/vue-plugin - Vue plugin
+│   │   ├── src/
+│   │   │   ├── A2uiRenderer.vue    # Main renderer component
+│   │   │   ├── plugin.ts           # Vue plugin definition
+│   │   │   └── index.ts
+│   │   └── package.json
+│   │
+│   └── dev/                     # @a2ui/dev - Development examples
+│       ├── src/
+│       │   ├── examples/        # Example pages
+│       │   │   ├── BasicExample.vue
+│       │   │   ├── FormExample.vue
+│       │   │   ├── StreamingDemo.vue   # Streaming protocol demo
+│       │   │   └── CommonComponents.vue
+│       │   ├── components/      # Dev components
+│       │   │   └── MessagePlayground.vue
+│       │   ├── router/          # Router configuration
+│       │   ├── App.vue
+│       │   └── main.ts
+│       └── package.json
+│
+├── docs/                        # Documentation
+│   └── INTEGRATION.md           # Integration guide (Chinese)
+│
+├── uno.config.ts                # UnoCSS configuration
+├── tsconfig.base.json           # TypeScript base config
+├── pnpm-workspace.yaml          # pnpm workspace config
+└── package.json                 # Root package.json
+```
+
+### Key Files
+
+| File | Description |
+|------|-------------|
+| `packages/core/src/types/components.ts` | Props type definitions for all components |
+| `packages/core/src/types/messages.ts` | A2UI message protocol type definitions |
+| `packages/vue-components/src/composables/useA2UI.ts` | Main entry composable, manages global state |
+| `packages/vue-plugin/src/A2uiRenderer.vue` | Main renderer, responsible for rendering component tree |
+| `packages/vue-plugin/src/plugin.ts` | Vue plugin, registers components and provides dependency injection |
+
 ## Installation
 
 ```bash
