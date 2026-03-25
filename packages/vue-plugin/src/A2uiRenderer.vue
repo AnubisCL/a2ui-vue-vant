@@ -1,5 +1,5 @@
 <template>
-  <div v-if="surface" class="a2ui-renderer">
+  <div v-if="renderNodes.length > 0" class="a2ui-renderer">
     <component
       :is="getComponentType(node.type)"
       v-for="(node, index) in renderNodes"
@@ -31,6 +31,7 @@
 <script setup lang="ts">
 import { computed, inject, h, type Component } from 'vue'
 import type { SurfaceId, ComponentTreeNode } from '@a2ui/core'
+import { useA2UI } from '@a2ui/vue-components'
 
 interface Props {
   surfaceId: SurfaceId
@@ -42,23 +43,22 @@ const emit = defineEmits<{
   (e: 'event', componentId: string, eventType: string, payload?: unknown): void
 }>()
 
-const surfaceManager = inject<any>('a2ui-surface-manager')
 const componentRegistry = inject<any>('a2ui-registry')
 
-const surface = computed(() => {
-  return surfaceManager?.get(props.surfaceId)
-})
+// Use the reactive componentStore from useA2UI
+const { componentStore } = useA2UI()
 
 const renderNodes = computed((): ComponentTreeNode[] => {
-  if (!surface.value) return []
+  const components = componentStore.value[props.surfaceId]
+  if (!components || Object.keys(components).length === 0) return []
 
   // For now, return all components as a flat list
   // In production, this would build a proper tree
   const nodes: ComponentTreeNode[] = []
 
-  for (const [, component] of surface.value.components.entries()) {
+  for (const component of Object.values(components)) {
     nodes.push({
-      id: component.componentId,
+      id: component.id,
       type: component.type,
       props: component.props ?? {},
       children: [],

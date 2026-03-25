@@ -2,95 +2,248 @@
 
 > A2UI (Agent to UI) Vue SDK - Declarative UI protocol implementation for Vue 3
 
+[简体中文](./README.zh-CN.md)
+
 A2UI is Google's declarative UI protocol for AI Agent to user interaction. This SDK enables Vue 3 applications to receive, parse, and render A2UI message streams from AI Agents.
 
 ## Features
 
 - 🚀 **Vue 3 Native** - Built with Vue 3 Composition API and TypeScript
-- 📦 **Complete Component Library** - All basic catalog components supported
-- 🎨 **Common Components** - Frequently used UI components (Badge, Avatar, Progress, etc.)
+- 📦 **Based on Vant 4** - Mobile-first UI component library
+- 🎨 **28+ Components** - Complete component library covering all use cases
 - 🔄 **Reactive Data Binding** - Two-way data binding with JSON Pointer support
-- 🎨 **UnoCSS Powered** - Atomic CSS for optimal performance and customization
-- ✨ **Customizable** - Easy component registration and customization
+- 🌊 **Streaming Support** - Real-time streaming protocol support
 - 📝 **Markdown Support** - Full Markdown support via markdown-it
-- 🔌 **Easy Integration** - Vue plugin for quick setup
+- 🎨 **UnoCSS Powered** - Atomic CSS for optimal performance
+- 📱 **Mobile First** - Optimized for mobile H5 applications
 
 ## Packages
 
-- `@a2ui/core` - Framework-agnostic core SDK
-- `@a2ui/vue-components` - Vue component implementations
-- `@a2ui/vue-plugin` - Vue plugin for easy integration
-- `@a2ui/dev` - Development and example app
+| Package | Description |
+|---------|-------------|
+| `@a2ui/core` | Framework-agnostic core SDK (types, parser, store) |
+| `@a2ui/vue-components` | Vue 3 component implementations based on Vant 4 |
+| `@a2ui/vue-plugin` | Vue plugin for easy integration |
+| `@a2ui/dev` | Development and example app |
 
 ## Installation
 
 ```bash
+# Install dependencies
 pnpm install
-```
 
-## Development
-
-```bash
 # Start development server
 pnpm dev
-
-# Run tests
-pnpm test
 
 # Build all packages
 pnpm build
 
-# Run linting
-pnpm lint
+# Run tests
+pnpm test
 ```
 
 ## Quick Start
 
+### 1. Install the plugin
+
+```typescript
+// main.ts
+import { createApp } from 'vue'
+import App from './App.vue'
+import { createA2UI } from '@a2ui/vue-plugin'
+import '@a2ui/vue-components/style.css'
+import 'vant/lib/index.css'
+
+const app = createApp(App)
+app.use(createA2UI())
+app.mount('#app')
+```
+
+### 2. Use the renderer
+
 ```vue
 <template>
-  <A2uiRenderer :surface-id="surfaceId" />
+  <A2uiRenderer :surface-id="surfaceId" @event="handleEvent" />
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { A2uiRenderer, useA2UI } from '@a2ui/vue-plugin'
 
-const { connect, handleMessage } = useA2UI()
 const surfaceId = ref('main')
+const { connect, handleMessage } = useA2UI()
 
-// Connect to your agent and handle messages
-connect('ws://your-agent-endpoint')
-</script>
+// Connect to WebSocket for streaming
+const ws = new WebSocket('ws://your-agent-endpoint')
+ws.onmessage = (event) => {
+  handleMessage(event.data)
+}
+```
+
+### 3. Mock Streaming Demo
+
+```typescript
+import { useA2UI } from '@a2ui/vue-plugin'
+
+const { handleMessage } = useA2UI()
+
+// Simulate streaming messages
+async function mockStreamingChat(message: string) {
+  const responses = [
+    // Surface definition
+    '{"type":"surface","surfaceId":"chat","name":"Chat Surface"}\n',
+
+    // Component updates (streaming)
+    '{"type":"component","componentId":"msg1","surfaceId":"chat","component":{"type":"Text","props":{"content":"Thinking..."}}}\n',
+
+    // Update component (streaming text)
+    '{"type":"component","componentId":"msg1","surfaceId":"chat","component":{"type":"Text","props":{"content":"Hello! How can I help you?"}}}\n',
+
+    // Add input component
+    '{"type":"component","componentId":"input1","surfaceId":"chat","component":{"type":"TextField","props":{"placeholder":"Type your message...","label":"Message"}}}\n',
+  ]
+
+  for (const msg of responses) {
+    await new Promise(r => setTimeout(r, 500))
+    handleMessage(msg)
+  }
+}
 ```
 
 ## Component Library
 
-### A2UI Basic Components (18 components)
+### Layout Components
+| Component | Vant Base | Description |
+|-----------|-----------|-------------|
+| Row | - | Horizontal flex container (UnoCSS) |
+| Column | - | Vertical flex container (UnoCSS) |
+| List | van-list | Scrollable list with lazy loading |
 
-**Layout:** Row, Column, List
-**Display:** Text, Image, Icon, Video, AudioPlayer, Divider
-**Input:** Button, TextField, CheckBox, DateTimeInput, ChoicePicker, Slider
-**Container:** Card, Tabs, Modal
+### Display Components
+| Component | Vant Base | Description |
+|-----------|-----------|-------------|
+| Text | - | Text with Markdown support |
+| Image | van-image | Image with lazy loading |
+| Icon | van-icon | Icon display |
+| Video | native | Video player |
+| AudioPlayer | native | Audio player with controls |
+| Divider | van-divider | Horizontal/vertical divider |
 
-### Common Components (10 components)
+### Input Components
+| Component | Vant Base | Description |
+|-----------|-----------|-------------|
+| Button | van-button | Clickable button |
+| TextField | van-field | Text input field |
+| CheckBox | van-checkbox | Checkbox input |
+| Slider | van-slider | Range slider |
+| ChoicePicker | van-radio-group | Single/multiple choice |
+| DateTimeInput | van-datetime-picker | Date/time picker |
 
-**UI Components:**
-- **Badge** - Display count or status badge
-- **Avatar** - User avatar with fallback
-- **Progress** - Progress bar with percentage
-- **Spinner** - Loading indicator
-- **Tag** - Label or category tag
-- **Alert** - Alert/notification box
-- **Switch** - Toggle switch
-- **Tooltip** - Hover tooltip
-- **Skeleton** - Loading placeholder
-- **Empty** - Empty state display
+### Container Components
+| Component | Vant Base | Description |
+|-----------|-----------|-------------|
+| Card | van-cell-group | Card container |
+| Tabs | van-tabs | Tabbed container |
+| Modal | van-popup | Modal dialog |
 
-See [COMMON_COMPONENTS.md](./COMMON_COMPONENTS.md) for detailed documentation.
+### Common Components
+| Component | Vant Base | Description |
+|-----------|-----------|-------------|
+| Badge | van-badge | Count or status badge |
+| Avatar | van-image | User avatar |
+| Progress | van-progress | Progress bar |
+| Spinner | van-loading | Loading indicator |
+| Tag | van-tag | Label or category tag |
+| Alert | van-notice-bar | Alert notification |
+| Switch | van-switch | Toggle switch |
+| Tooltip | van-popover | Hover tooltip |
+| Skeleton | van-skeleton | Loading placeholder |
+| Empty | van-empty | Empty state display |
 
-## Documentation
+## A2UI Protocol
 
-Full documentation coming soon.
+### Message Types
+
+```typescript
+// Surface definition
+{
+  "type": "surface",
+  "surfaceId": "main",
+  "name": "Main Surface"
+}
+
+// Component creation/update
+{
+  "type": "component",
+  "componentId": "button1",
+  "surfaceId": "main",
+  "component": {
+    "type": "Button",
+    "props": {
+      "label": "Click Me",
+      "variant": "primary"
+    }
+  }
+}
+
+// Data model update
+{
+  "type": "data",
+  "path": "/user/name",
+  "value": "John Doe"
+}
+```
+
+### Streaming Format
+
+Messages are sent in JSONL format (JSON Lines):
+```
+{"type":"surface","surfaceId":"chat","name":"Chat"}
+{"type":"component","componentId":"msg1","surfaceId":"chat","component":{"type":"Text","props":{"content":"Hello"}}}
+{"type":"data","path":"/count","value":42}
+```
+
+## Props Mapping
+
+A2UI props are automatically mapped to Vant props:
+
+| A2UI Prop | Vant Prop | Notes |
+|-----------|-----------|-------|
+| `variant: 'primary'` | `type: 'primary'` | Button variant |
+| `size: 'medium'` | `size: 'normal'` | Component size |
+| `disabled` | `disabled` | Direct mapping |
+| `label` | `label` | Form field label |
+
+## Development
+
+```bash
+# Start dev server
+pnpm dev
+
+# Build library
+pnpm build
+
+# Type check
+pnpm typecheck
+
+# Run tests
+pnpm test
+```
+
+## Browser Support
+
+- Chrome >= 80
+- Safari >= 13.1
+- Firefox >= 78
+- iOS Safari >= 13.4
+- Android Chrome >= 80
 
 ## License
 
 MIT
+
+## Links
+
+- [Vant 4 Documentation](https://vant-ui.github.io/vant/#/en-US)
+- [A2UI Protocol Spec](https://github.com/google/a2ui)
+- [UnoCSS Documentation](https://unocss.dev/)

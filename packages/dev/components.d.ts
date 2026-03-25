@@ -14,5 +14,8 @@ declare module 'vue' {
     MessagePlayground: typeof import('./src/components/MessagePlayground.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    VanButton: typeof import('vant/es')['Button']
+    VanLoading: typeof import('vant/es')['Loading']
+    VanSlider: typeof import('vant/es')['Slider']
   }
 }

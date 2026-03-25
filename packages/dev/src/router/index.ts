@@ -8,6 +8,7 @@ import BasicExample from '../examples/BasicExample.vue'
 import FormExample from '../examples/FormExample.vue'
 import MessagePlayground from '../components/MessagePlayground.vue'
 import CommonComponents from '../examples/CommonComponents.vue'
+import StreamingDemo from '../examples/StreamingDemo.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -34,6 +35,11 @@ const routes: RouteRecordRaw[] = [
     path: '/common',
     name: 'common',
     component: CommonComponents,
+  },
+  {
+    path: '/streaming',
+    name: 'streaming',
+    component: StreamingDemo,
   },
 ]
 

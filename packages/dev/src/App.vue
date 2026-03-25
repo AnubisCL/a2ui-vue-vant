@@ -13,6 +13,7 @@
           <li><router-link to="/basic">Basic Components</router-link></li>
           <li><router-link to="/form">Form Example</router-link></li>
           <li><router-link to="/common">Common Components</router-link></li>
+          <li><router-link to="/streaming">🌊 Streaming Demo</router-link></li>
           <li><router-link to="/playground">Message Playground</router-link></li>
         </ul>
       </nav>

@@ -8,7 +8,18 @@
       "Bash(pnpm add:*)",
       "Bash(cd /Users/anubis/404net/a2ui-vue/packages/dev && timeout 10s pnpm dev 2>&1 || true)",
       "Bash(pnpm --filter dev build 2>&1 | tail -20)",
-      "Bash(timeout 10 pnpm dev)"
+      "Bash(timeout 10 pnpm dev)",
+      "Bash(vite build:*)",
+      "Bash(du:*)",
+      "Bash(ls:*)",
+      "Bash(curl -s http://localhost:5173/streaming)",
+      "Bash(python3:*)",
+      "Bash(pnpm list:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(find node_modules -name playwright* -type d)",
+      "Bash(rm -rf /Users/anubis/Library/Caches/ms-playwright/__dirlock 2)",
+      "Bash(/dev/null npx:*)",
+      "Bash(curl -s http://localhost:5173/)"
     ]
   },
   "enabledPlugins": {
