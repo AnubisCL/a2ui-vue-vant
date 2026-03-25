@@ -11,11 +11,19 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'streaming',
     component: StreamingDemo,
+    meta: { title: '流式演示' },
   },
   {
     path: '/chart',
     name: 'chart',
     component: ChartExample,
+    meta: { title: '图表演示' },
+  },
+  {
+    path: '/components',
+    name: 'components',
+    component: () => import('../examples/ComponentsDemo.vue'),
+    meta: { title: '组件演示' },
   },
 ]
 
