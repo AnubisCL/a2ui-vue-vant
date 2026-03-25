@@ -3,20 +3,30 @@
     <!-- Header -->
     <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
       <h1 class="text-xl font-bold text-gray-800 mb-2">🧩 A2UI 组件演示</h1>
-      <p class="text-sm text-gray-500">展示所有 A2UI 组件的使用方式</p>
+      <p class="text-sm text-gray-500">展示所有 A2UI 组件的使用方式（流式发送）</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+      <div class="flex items-center gap-4 mb-4">
+        <label class="text-sm text-gray-600">流式速度:</label>
+        <van-slider v-model="streamSpeed" :min="50" :max="500" :step="50" class="flex-1" />
+        <span class="text-sm text-gray-500 w-16">{{ streamSpeed }}ms</span>
+      </div>
     </div>
 
     <!-- Category Tabs -->
     <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-      <van-tabs v-model:active="activeCategory" shrink sticky>
+      <van-tabs v-model:active="activeCategory" shrink>
         <van-tab v-for="cat in categories" :key="cat.id" :title="cat.name" :name="cat.id">
           <div class="py-4">
-            <div class="grid gap-3">
+            <div class="grid grid-cols-3 gap-2">
               <van-button
                 v-for="demo in cat.demos"
                 :key="demo.id"
                 :type="currentDemo === demo.id ? 'primary' : 'default'"
                 size="small"
+                :disabled="isStreaming"
                 @click="runDemo(demo.id)"
               >
                 {{ demo.name }}
@@ -27,9 +37,34 @@
       </van-tabs>
     </div>
 
+    <!-- Status -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+      <div class="flex items-center gap-2">
+        <van-loading v-if="isStreaming" type="spinner" size="16" />
+        <span :class="isStreaming ? 'text-blue-500' : 'text-gray-400'" class="text-sm">
+          {{ isStreaming ? '正在流式发送消息...' : '等待选择演示' }}
+        </span>
+        <span v-if="messageCount > 0" class="text-xs text-gray-400 ml-auto">
+          已发送 {{ messageCount }} 条消息
+        </span>
+      </div>
+    </div>
+
     <!-- A2UI Renderer -->
     <div class="bg-white rounded-xl shadow-sm p-4 min-h-[400px]">
       <A2uiRenderer :surface-id="currentSurface" @event="handleComponentEvent" />
+    </div>
+
+    <!-- Message Log -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mt-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold text-gray-700">消息日志</h3>
+        <van-button size="mini" @click="clearLog">清空</van-button>
+      </div>
+      <div class="bg-gray-900 rounded-lg p-3 max-h-[300px] overflow-auto">
+        <pre v-for="(log, index) in messageLogs" :key="index" class="text-xs text-green-400 font-mono mb-1">{{ log }}</pre>
+        <pre v-if="messageLogs.length === 0" class="text-xs text-gray-500">等待消息...</pre>
+      </div>
     </div>
   </div>
 </template>
@@ -42,10 +77,35 @@ import { A2uiRenderer, useA2UI } from '@a2ui/vue-plugin'
 const currentSurface = ref('components-demo')
 const activeCategory = ref('display')
 const currentDemo = ref('')
+const streamSpeed = ref(150)
+const isStreaming = ref(false)
+const messageCount = ref(0)
+const messageLogs = ref<string[]>([])
+
 const { handleMessage, clearSurface } = useA2UI()
 
-const sendMessage = (message: object) => {
-  handleMessage(JSON.stringify(message) + '\n')
+// 日志记录
+const logMessage = (msg: string) => {
+  const timestamp = new Date().toLocaleTimeString()
+  messageLogs.value.unshift(`[${timestamp}] ${msg}`)
+  if (messageLogs.value.length > 50) {
+    messageLogs.value.pop()
+  }
+}
+
+// 清空日志
+const clearLog = () => {
+  messageLogs.value = []
+}
+
+// 发送流式消息
+const sendStreamingMessage = async (message: object) => {
+  isStreaming.value = true
+  const msgStr = JSON.stringify(message)
+  logMessage(msgStr.length > 100 ? msgStr.substring(0, 100) + '...' : msgStr)
+  handleMessage(msgStr + '\n')
+  messageCount.value++
+  await new Promise(r => setTimeout(r, streamSpeed.value))
 }
 
 // Demo definitions
@@ -77,7 +137,6 @@ const categories = reactive([
     demos: [
       { id: 'card', name: '卡片' },
       { id: 'tabs', name: '标签页' },
-      { id: 'modal', name: '弹窗' },
     ]
   },
   {
@@ -111,15 +170,16 @@ const categories = reactive([
   },
 ])
 
-// Demo implementations
-const demos: Record<string, () => void> = {
+// Demo implementations (streaming)
+const demos: Record<string, () => Promise<void>> = {
   // Display demos
-  text: () => {
+  text: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '文本演示' })
+    messageCount.value = 0
 
-    // Text with Markdown
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '文本演示' })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'text-1',
@@ -133,36 +193,41 @@ const demos: Record<string, () => void> = {
       }
     })
 
-    // Different sizes
-    sendMessage({
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
-      componentId: 'text-2',
-      component: {
-        type: 'Row',
-        props: { gap: 16, valign: 'center' }
-      }
+      componentId: 'text-row',
+      component: { type: 'Row', props: { gap: 16, valign: 'center', margin: [16, 0, 0, 0] } }
     })
 
-    ;['small', 'medium', 'large', 'xlarge'].forEach((size, i) => {
-      sendMessage({
+    for (const size of ['small', 'medium', 'large', 'xlarge']) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `size-${i}`,
-        parentId: 'text-2',
-        component: {
-          type: 'Text',
-          props: { content: `${size} size`, size }
-        }
+        componentId: `size-${size}`,
+        parentId: 'text-row',
+        component: { type: 'Text', props: { content: `${size}`, size } }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('文本演示完成')
   },
 
-  image: () => {
+  image: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '图片演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '图片演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 📷 图片组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'img-1',
@@ -172,155 +237,233 @@ const demos: Record<string, () => void> = {
           src: 'https://picsum.photos/400/200',
           width: '100%',
           height: 200,
-          fit: 'cover'
+          fit: 'cover',
+          borderRadius: 8
         }
       }
     })
+
+    isStreaming.value = false
+    showToast('图片演示完成')
   },
 
-  icon: () => {
+  icon: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '图标演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '图标演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 🔷 图标组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'icon-row',
-      component: { type: 'Row', props: { gap: 16, valign: 'center' } }
+      component: { type: 'Row', props: { gap: 24, valign: 'center', margin: [16, 0, 0, 0] } }
     })
 
-    ;['home-o', 'user-o', 'star-o', 'like-o', 'setting-o'].forEach((name, i) => {
-      sendMessage({
+    for (const name of ['home-o', 'user-o', 'star-o', 'like-o', 'setting-o']) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `icon-${i}`,
+        componentId: `icon-${name}`,
         parentId: 'icon-row',
         component: {
           type: 'Icon',
           props: { name, size: 'xlarge', color: '#1989fa' }
         }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('图标演示完成')
   },
 
-  divider: () => {
+  divider: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '分割线演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '分割线演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## ➖ 分割线组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'text-above',
       component: { type: 'Text', props: { content: '上方内容' } }
     })
 
-    sendMessage({
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'divider-1',
       component: { type: 'Divider', props: { margin: 16 } }
     })
 
-    sendMessage({
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'text-below',
       component: { type: 'Text', props: { content: '下方内容' } }
     })
+
+    isStreaming.value = false
+    showToast('分割线演示完成')
   },
 
   // Input demos
-  button: () => {
+  button: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '按钮演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '按钮演示' })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
-      componentId: 'btn-row',
-      component: { type: 'Row', props: { gap: 12, wrap: true } }
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 🔘 按钮组件', size: 'large' } }
     })
 
-    ;[
-      { variant: 'primary', label: '主要按钮' },
-      { variant: 'secondary', label: '次要按钮' },
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'btn-row-1',
+      component: { type: 'Row', props: { gap: 12, wrap: true, margin: [16, 0, 0, 0] } }
+    })
+
+    for (const btn of [
+      { variant: 'primary', label: '主要' },
+      { variant: 'secondary', label: '次要' },
       { variant: 'borderless', label: '无边框' },
-      { variant: 'danger', label: '危险按钮' }
-    ].forEach((btn, i) => {
-      sendMessage({
+      { variant: 'danger', label: '危险' }
+    ]) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `btn-${i}`,
-        parentId: 'btn-row',
+        componentId: `btn-${btn.variant}`,
+        parentId: 'btn-row-1',
         component: { type: 'Button', props: btn }
       })
-    })
+    }
 
-    // Sizes
-    sendMessage({
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
-      componentId: 'size-row',
-      component: { type: 'Row', props: { gap: 12, margin: [16, 0, 0, 0], valign: 'center' } }
+      componentId: 'text-sizes',
+      component: { type: 'Text', props: { content: '**不同尺寸：**', margin: [16, 0, 8, 0] } }
     })
 
-    ;[
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'btn-row-2',
+      component: { type: 'Row', props: { gap: 12, valign: 'center' } }
+    })
+
+    for (const btn of [
       { size: 'small', label: '小', variant: 'primary' },
       { size: 'medium', label: '中', variant: 'primary' },
       { size: 'large', label: '大', variant: 'primary' }
-    ].forEach((btn, i) => {
-      sendMessage({
+    ]) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `size-btn-${i}`,
-        parentId: 'size-row',
+        componentId: `btn-size-${btn.size}`,
+        parentId: 'btn-row-2',
         component: { type: 'Button', props: btn }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('按钮演示完成')
   },
 
-  textfield: () => {
+  textfield: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '文本框演示' })
+    messageCount.value = 0
 
-    ;[
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '文本框演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 📝 文本框组件', size: 'large' } }
+    })
+
+    for (const field of [
       { id: 'tf1', label: '普通文本', placeholder: '请输入文本' },
       { id: 'tf2', label: '数字输入', type: 'number', placeholder: '请输入数字' },
-      { id: 'tf3', label: '密码输入', type: 'obscured', placeholder: '请输入密码' },
-      { id: 'tf4', label: '多行文本', type: 'longText', placeholder: '请输入多行文本' }
-    ].forEach(field => {
-      sendMessage({
+      { id: 'tf3', label: '密码输入', type: 'obscured', placeholder: '请输入密码' }
+    ]) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
         componentId: field.id,
         component: { type: 'TextField', props: field }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('文本框演示完成')
   },
 
-  checkbox: () => {
+  checkbox: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '复选框演示' })
+    messageCount.value = 0
 
-    ;[
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '复选框演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## ☑️ 复选框组件', size: 'large' } }
+    })
+
+    for (const cb of [
       { label: '未选中', checked: false },
       { label: '已选中', checked: true },
       { label: '禁用状态', checked: false, disabled: true }
-    ].forEach((cb, i) => {
-      sendMessage({
+    ]) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `cb-${i}`,
+        componentId: `cb-${cb.label}`,
         component: { type: 'CheckBox', props: cb }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('复选框演示完成')
   },
 
-  slider: () => {
+  slider: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '滑块演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '滑块演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 🎚️ 滑块组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'slider-1',
@@ -330,7 +473,7 @@ const demos: Record<string, () => void> = {
       }
     })
 
-    sendMessage({
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'slider-2',
@@ -339,13 +482,25 @@ const demos: Record<string, () => void> = {
         props: { label: '步长为10', min: 0, max: 100, step: 10, showValue: true }
       }
     })
+
+    isStreaming.value = false
+    showToast('滑块演示完成')
   },
 
-  picker: () => {
+  picker: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '选择器演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '选择器演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 🎯 选择器组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'picker-1',
@@ -364,7 +519,7 @@ const demos: Record<string, () => void> = {
       }
     })
 
-    sendMessage({
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'picker-2',
@@ -382,14 +537,26 @@ const demos: Record<string, () => void> = {
         }
       }
     })
+
+    isStreaming.value = false
+    showToast('选择器演示完成')
   },
 
   // Container demos
-  card: () => {
+  card: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '卡片演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '卡片演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 🃏 卡片组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'card-1',
@@ -403,7 +570,7 @@ const demos: Record<string, () => void> = {
       }
     })
 
-    sendMessage({
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'card-2',
@@ -421,13 +588,25 @@ const demos: Record<string, () => void> = {
         }
       }
     })
+
+    isStreaming.value = false
+    showToast('卡片演示完成')
   },
 
-  tabs: () => {
+  tabs: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '标签页演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '标签页演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 📑 标签页组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'tabs-1',
@@ -442,40 +621,34 @@ const demos: Record<string, () => void> = {
         }
       }
     })
-  },
 
-  modal: () => {
-    clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '弹窗演示' })
-
-    sendMessage({
-      type: 'component',
-      surfaceId: currentSurface.value,
-      componentId: 'modal-btn',
-      component: {
-        type: 'Button',
-        props: { label: '打开弹窗', variant: 'primary' }
-      }
-    })
+    isStreaming.value = false
+    showToast('标签页演示完成')
   },
 
   // Layout demos
-  row: () => {
+  row: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '水平布局演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '水平布局演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## ↔️ 水平布局组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'row-1',
-      component: {
-        type: 'Row',
-        props: { gap: 12, align: 'center', valign: 'center' }
-      }
+      component: { type: 'Row', props: { gap: 12, align: 'center', valign: 'center' } }
     })
 
-    ;[1, 2, 3].forEach(i => {
-      sendMessage({
+    for (let i = 1; i <= 3; i++) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
         componentId: `row-item-${i}`,
@@ -485,25 +658,34 @@ const demos: Record<string, () => void> = {
           props: { title: `卡片 ${i}`, content: '水平排列', elevated: true }
         }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('水平布局演示完成')
   },
 
-  column: () => {
+  column: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '垂直布局演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '垂直布局演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## ↕️ 垂直布局组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'col-1',
-      component: {
-        type: 'Column',
-        props: { gap: 12, align: 'stretch' }
-      }
+      component: { type: 'Column', props: { gap: 12, align: 'stretch' } }
     })
 
-    ;[1, 2, 3].forEach(i => {
-      sendMessage({
+    for (let i = 1; i <= 3; i++) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
         componentId: `col-item-${i}`,
@@ -513,158 +695,239 @@ const demos: Record<string, () => void> = {
           props: { title: `卡片 ${i}`, content: '垂直排列', elevated: true }
         }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('垂直布局演示完成')
   },
 
-  list: () => {
+  list: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '列表演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '列表演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 📋 列表布局', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'list-1',
-      component: {
-        type: 'Column',
-        props: { gap: 8 }
-      }
+      component: { type: 'Column', props: { gap: 8 } }
     })
 
-    ;['项目 A', '项目 B', '项目 C', '项目 D', '项目 E'].forEach((item, i) => {
-      sendMessage({
+    for (const item of ['项目 A', '项目 B', '项目 C', '项目 D', '项目 E']) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `list-item-${i}`,
+        componentId: `list-item-${item}`,
         parentId: 'list-1',
         component: {
           type: 'Card',
-          props: { title: item, content: `这是列表项 ${i + 1} 的内容`, elevated: true }
+          props: { title: item, content: '列表项内容', elevated: true }
         }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('列表演示完成')
   },
 
   // Common demos
-  badge: () => {
+  badge: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '徽标演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '徽标演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 🔴 徽标组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'badge-row',
-      component: { type: 'Row', props: { gap: 24, valign: 'center' } }
+      component: { type: 'Row', props: { gap: 24, valign: 'center', margin: [16, 0, 0, 0] } }
     })
 
-    ;[
+    for (const badge of [
       { content: '5', color: '#f44336' },
       { content: '99+', color: '#ff9800' },
       { content: 'NEW', color: '#4caf50' }
-    ].forEach((badge, i) => {
-      sendMessage({
+    ]) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `badge-${i}`,
+        componentId: `badge-${badge.content}`,
         parentId: 'badge-row',
         component: { type: 'Badge', props: badge }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('徽标演示完成')
   },
 
-  progress: () => {
+  progress: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '进度条演示' })
+    messageCount.value = 0
 
-    ;[
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '进度条演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 📊 进度条组件', size: 'large' } }
+    })
+
+    for (const prog of [
       { percentage: 25, color: '#1989fa' },
       { percentage: 50, color: '#07c160' },
       { percentage: 75, color: '#ff976a' },
       { percentage: 100, color: '#4caf50' }
-    ].forEach((prog, i) => {
-      sendMessage({
+    ]) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `prog-${i}`,
+        componentId: `prog-${prog.percentage}`,
         component: { type: 'Progress', props: prog }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('进度条演示完成')
   },
 
-  tag: () => {
+  tag: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '标签演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '标签演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 🏷️ 标签组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'tag-row',
-      component: { type: 'Row', props: { gap: 8, wrap: true } }
+      component: { type: 'Row', props: { gap: 8, wrap: true, margin: [16, 0, 0, 0] } }
     })
 
-    ;[
-      { label: '标签', type: 'default' },
+    for (const tag of [
+      { label: '默认', type: 'default' },
       { label: '主要', type: 'primary' },
       { label: '成功', type: 'success' },
       { label: '警告', type: 'warning' },
       { label: '危险', type: 'danger' }
-    ].forEach((tag, i) => {
-      sendMessage({
+    ]) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `tag-${i}`,
+        componentId: `tag-${tag.type}`,
         parentId: 'tag-row',
         component: { type: 'Tag', props: tag }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('标签演示完成')
   },
 
-  spinner: () => {
+  spinner: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '加载演示' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '加载演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## ⏳ 加载组件', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'spinner-row',
-      component: { type: 'Row', props: { gap: 24, valign: 'center' } }
+      component: { type: 'Row', props: { gap: 24, valign: 'center', margin: [16, 0, 0, 0] } }
     })
 
-    ;['spinner', 'circular', 'dots'].forEach((type, i) => {
-      sendMessage({
+    for (const type of ['spinner', 'circular', 'dots']) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `spinner-${i}`,
+        componentId: `spinner-${type}`,
         parentId: 'spinner-row',
         component: { type: 'Spinner', props: { type, size: 'large' } }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('加载演示完成')
   },
 
-  alert: () => {
+  alert: async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '警告演示' })
+    messageCount.value = 0
 
-    ;[
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '警告演示' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## ⚠️ 警告组件', size: 'large' } }
+    })
+
+    for (const alert of [
       { type: 'info', message: '这是一条提示信息' },
       { type: 'success', message: '操作成功完成' },
       { type: 'warning', message: '请注意检查输入' },
       { type: 'error', message: '发生错误，请重试' }
-    ].forEach((alert, i) => {
-      sendMessage({
+    ]) {
+      await sendStreamingMessage({
         type: 'component',
         surfaceId: currentSurface.value,
-        componentId: `alert-${i}`,
+        componentId: `alert-${alert.type}`,
         component: { type: 'Alert', props: alert }
       })
-    })
+    }
+
+    isStreaming.value = false
+    showToast('警告演示完成')
   },
 
   // Chart demos
-  'chart-line': () => {
+  'chart-line': async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '折线图' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '折线图' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 📈 折线图', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'line-chart',
@@ -692,13 +955,25 @@ const demos: Record<string, () => void> = {
         }
       }
     })
+
+    isStreaming.value = false
+    showToast('折线图演示完成')
   },
 
-  'chart-bar': () => {
+  'chart-bar': async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '柱状图' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '柱状图' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 📊 柱状图', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'bar-chart',
@@ -733,13 +1008,25 @@ const demos: Record<string, () => void> = {
         }
       }
     })
+
+    isStreaming.value = false
+    showToast('柱状图演示完成')
   },
 
-  'chart-pie': () => {
+  'chart-pie': async () => {
     clearSurface(currentSurface.value)
-    sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '饼图' })
+    messageCount.value = 0
 
-    sendMessage({
+    await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '饼图' })
+
+    await sendStreamingMessage({
+      type: 'component',
+      surfaceId: currentSurface.value,
+      componentId: 'text-title',
+      component: { type: 'Text', props: { content: '## 🥧 饼图', size: 'large' } }
+    })
+
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'pie-chart',
@@ -772,29 +1059,29 @@ const demos: Record<string, () => void> = {
         }
       }
     })
+
+    isStreaming.value = false
+    showToast('饼图演示完成')
   },
 }
 
 // Run demo
-const runDemo = (demoId: string) => {
+const runDemo = async (demoId: string) => {
   currentDemo.value = demoId
   const demo = demos[demoId]
   if (demo) {
-    demo()
-    showToast(`已加载: ${demoId}`)
+    await demo()
   }
 }
 
 // Event handler
-const handleComponentEvent = (componentId: string, eventType: string, payload?: unknown) => {
-  console.log('Event:', componentId, eventType, payload)
+const handleComponentEvent = (componentId: string, eventType: string, _payload?: unknown) => {
+  logMessage(`事件: ${componentId} - ${eventType}`)
 }
 
 // Initialize
 onMounted(() => {
-  sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '组件演示' })
-  // Run first demo
-  runDemo('text')
+  handleMessage(JSON.stringify({ type: 'surface', surfaceId: currentSurface.value, name: '组件演示' }) + '\n')
 })
 </script>
 
