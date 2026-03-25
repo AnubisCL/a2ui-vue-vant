@@ -2,9 +2,13 @@
 
 > A2UI (Agent to UI) Vue SDK - 用于 Vue 3 的声明式 UI 协议实现
 
-[English](./README.md)
+[English](./README.md) | [接入说明文档](./docs/INTEGRATION.md)
 
 A2UI 是 Google 提出的声明式 UI 协议，用于 AI Agent 与用户的交互。本 SDK 使 Vue 3 应用能够接收、解析和渲染来自 AI Agent 的 A2UI 消息流。
+
+## 📚 文档
+
+- [接入说明文档](./docs/INTEGRATION.md) - 完整的接入指南，包含组件定义、样式系统、事件处理
 
 ## 特性
 
