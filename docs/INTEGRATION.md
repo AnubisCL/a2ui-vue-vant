@@ -592,6 +592,101 @@ async function createForm() {
 
 ---
 
+## 图表组件
+
+Chart 组件基于 ECharts 实现，支持完整的数据可视化功能。
+
+### 基础配置
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| option | object | - | ECharts 完整配置对象（必填）|
+| width | string\|number | '100%' | 图表宽度 |
+| height | string\|number | '300px' | 图表高度 |
+| autoResize | boolean | true | 容器尺寸变化时自动调整 |
+| theme | string | 'light' | 图表主题 ('light' \| 'dark' \| 自定义) |
+| renderer | 'canvas'\|'svg' | 'canvas' | 渲染器类型 |
+
+### 使用示例
+
+#### 折线图
+
+```json
+{
+  "type": "component",
+  "surfaceId": "dashboard",
+  "componentId": "line-chart",
+  "component": {
+    "type": "Chart",
+    "props": {
+      "height": "300px",
+      "option": {
+        "title": { "text": "销售趋势" },
+        "xAxis": { "type": "category", "data": ["1月", "2月", "3月"] },
+        "yAxis": { "type": "value" },
+        "series": [{ "type": "line", "data": [100, 200, 150] }]
+      }
+    }
+  }
+}
+```
+
+#### 饼图
+
+```json
+{
+  "type": "component",
+  "surfaceId": "dashboard",
+  "componentId": "pie-chart",
+  "component": {
+    "type": "Chart",
+    "props": {
+      "height": "400px",
+      "option": {
+        "series": [{
+          "type": "pie",
+          "radius": "50%",
+          "data": [
+            { "value": 1048, "name": "搜索引擎" },
+            { "value": 735, "name": "直接访问" },
+            { "value": 580, "name": "邮件营销" }
+          ]
+        }]
+      }
+    }
+  }
+}
+```
+
+### 流式更新
+
+Chart 组件完全支持 A2UI 的流式协议。通过重复发送相同 componentId 的消息，可以实现图表数据的实时更新：
+
+```json
+// 初始创建图表
+{"type":"component","surfaceId":"dashboard","componentId":"realtime-chart","component":{"type":"Chart","props":{"option":{"xAxis":{"data":[]},"series":[{"data":[]}]}}}}
+
+// 流式更新数据（增量）
+{"type":"component","surfaceId":"dashboard","componentId":"realtime-chart","component":{"type":"Chart","props":{"option":{"xAxis":{"data":["1秒","2秒","3秒"]},"series":[{"data":[10,20,15]}]}}}}
+```
+
+### 依赖说明
+
+使用 Chart 组件需要安装 echarts：
+
+```bash
+pnpm install echarts
+```
+
+### 事件
+
+| 事件 | 说明 | 回调参数 |
+|------|------|----------|
+| ready | 图表初始化完成 | ECharts 实例 |
+| click | 点击图表元素 | 事件对象 |
+
+---
+
 ## 组件清单
 
 | 类别 | 组件 | 说明 |
@@ -604,6 +699,7 @@ async function createForm() {
 | | Icon | 图标 |
 | | Video | 视频 |
 | | AudioPlayer | 音频播放器 |
+| | Chart | 图表（ECharts）|
 | | Divider | 分割线 |
 | **输入** | Button | 按钮 |
 | | TextField | 文本输入框 |
