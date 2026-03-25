@@ -50,6 +50,7 @@
   "dependencies": {
     "@a2ui/core": "workspace:*",
     "@vueuse/core": "^10.7.0",
+    "echarts": "^6.0.0",
     "markdown-it": "^14.0.0",
     "vant": "^4.9.22"
   },

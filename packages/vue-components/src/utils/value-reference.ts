@@ -62,6 +62,16 @@ export function resolveArrayValue<T>(value: T[] | ValueReference<T[]> | undefine
 }
 
 /**
+ * 解析对象值
+ */
+export function resolveObjectValue<T extends Record<string, unknown>>(
+  value: T | ValueReference<T> | undefined,
+  defaultValue: T
+): T {
+  return resolveValue(value, defaultValue)
+}
+
+/**
  * 创建响应式值绑定
  *
  * 用于需要双向绑定的场景，如表单输入
