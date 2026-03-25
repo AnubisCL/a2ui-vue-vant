@@ -5,6 +5,7 @@ import router from './router'
 
 import './main.css'
 import 'uno.css'
+import 'vant/lib/index.css'
 
 const app = createApp(App)
 

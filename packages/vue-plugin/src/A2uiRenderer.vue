@@ -52,20 +52,31 @@ const renderNodes = computed((): ComponentTreeNode[] => {
   const components = componentStore.value[props.surfaceId]
   if (!components || Object.keys(components).length === 0) return []
 
-  // For now, return all components as a flat list
-  // In production, this would build a proper tree
-  const nodes: ComponentTreeNode[] = []
+  // 构建组件树
+  const componentMap = new Map<string, ComponentTreeNode & { parentId?: string | null }>()
+  const rootNodes: ComponentTreeNode[] = []
 
-  for (const component of Object.values(components)) {
-    nodes.push({
+  // 第一遍：创建所有节点
+  for (const [id, component] of Object.entries(components)) {
+    componentMap.set(id, {
       id: component.id,
       type: component.type,
       props: component.props ?? {},
       children: [],
+      parentId: component.parentId,
     })
   }
 
-  return nodes
+  // 第二遍：根据 parentId 构建树
+  for (const node of componentMap.values()) {
+    if (node.parentId && componentMap.has(node.parentId)) {
+      componentMap.get(node.parentId)!.children.push(node)
+    } else {
+      rootNodes.push(node)
+    }
+  }
+
+  return rootNodes
 })
 
 const getComponentType = (type: string): Component | string => {
@@ -131,8 +142,12 @@ export const A2uiRendererNode = {
 
 <style scoped>
 .a2ui-renderer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
 }
 
 .a2ui-renderer--empty {

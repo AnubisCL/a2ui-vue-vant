@@ -66,6 +66,7 @@
 import { ref, onMounted } from 'vue'
 import { showToast } from 'vant'
 import { A2uiRenderer, useA2UI } from '@a2ui/vue-plugin'
+import { A2UI_VERSION } from '@a2ui/core'
 
 // State
 const streamSpeed = ref(200)
@@ -75,7 +76,7 @@ const currentSurface = ref('demo')
 const messageLogs = ref<string[]>([])
 
 // A2UI Hooks
-const { handleMessage, clearSurface } = useA2UI()
+const { handleMessage, clearSurface, sendAction } = useA2UI()
 
 // 日志记录
 const logMessage = (msg: string) => {
@@ -456,9 +457,23 @@ A2UI (Agent to UI) 是一个声明式 UI 协议，专为 AI Agent 与用户交�
 }
 
 // 事件处理
-const handleComponentEvent = (event: any) => {
-  logMessage(`事件: ${JSON.stringify(event)}`)
-  showToast(`收到事件: ${event.type || 'click'}`)
+const handleComponentEvent = (componentId: string, eventType: string, payload?: unknown) => {
+  logMessage(`事件: componentId=${componentId}, type=${eventType}`)
+
+  // 发送事件到后端（通过 sendAction）
+  sendAction({
+    type: 'userAction',
+    version: A2UI_VERSION,
+    surfaceId: currentSurface.value,
+    action: {
+      componentId,
+      event: eventType,
+      payload,
+      timestamp: Date.now(),
+    },
+  })
+
+  showToast(`收到事件: ${eventType}`)
 }
 
 // 清空日志
