@@ -10,7 +10,7 @@ A2UI is Google's declarative UI protocol for AI Agent to user interaction. This 
 
 - 🚀 **Vue 3 Native** - Built with Vue 3 Composition API and TypeScript
 - 📦 **Based on Vant 4** - Mobile-first UI component library
-- 🎨 **28+ Components** - Complete component library covering all use cases
+- 🎨 **29+ Components** - Complete component library covering all use cases
 - 🔄 **Reactive Data Binding** - Two-way data binding with JSON Pointer support
 - 🌊 **Streaming Support** - Real-time streaming protocol support
 - 📝 **Markdown Support** - Full Markdown support via markdown-it
@@ -214,6 +214,7 @@ async function mockStreamingChat(message: string) {
 | Text | - | Text with Markdown support |
 | Image | van-image | Image with lazy loading |
 | Icon | van-icon | Icon display |
+| Chart | - | ECharts-based data visualization |
 | Video | native | Video player |
 | AudioPlayer | native | Audio player with controls |
 | Divider | van-divider | Horizontal/vertical divider |
