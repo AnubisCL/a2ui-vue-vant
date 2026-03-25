@@ -167,6 +167,16 @@ export const BASIC_COMPONENT_METADATA: Record<ComponentType, ComponentMetadata> 
     supportsChildren: true,
     supportsTemplates: false,
   },
+
+  // Chart
+  Chart: {
+    type: 'Chart',
+    displayName: 'Chart',
+    category: 'display',
+    description: 'ECharts wrapper for data visualization',
+    supportsChildren: false,
+    supportsTemplates: false,
+  },
 }
 
 /**

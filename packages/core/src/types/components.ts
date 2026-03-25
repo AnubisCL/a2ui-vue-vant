@@ -416,6 +416,35 @@ export interface ModalProps {
 
 /**
  * ========================================
+ * CHART COMPONENT
+ * ========================================
+ */
+
+/**
+ * ECharts option type (loose typing for flexibility)
+ */
+export type EChartsOption = Record<string, unknown>
+
+/**
+ * Chart component - ECharts wrapper
+ */
+export interface ChartProps {
+  /** ECharts complete option configuration */
+  option: ValueReference<EChartsOption>
+  /** Chart width, default '100%' */
+  width?: string | number
+  /** Chart height, default '300px' */
+  height?: string | number
+  /** Auto resize on container size change, default true */
+  autoResize?: boolean
+  /** Chart theme */
+  theme?: 'light' | 'dark' | string
+  /** Renderer type */
+  renderer?: 'canvas' | 'svg'
+}
+
+/**
+ * ========================================
  * COMPONENT TYPE MAPPINGS
  * ========================================
  */
@@ -449,6 +478,9 @@ export interface ComponentPropsMap {
   Card: CardProps
   Tabs: TabsProps
   Modal: ModalProps
+
+  // Chart
+  Chart: ChartProps
 }
 
 /**
