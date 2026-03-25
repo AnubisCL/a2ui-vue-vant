@@ -19,7 +19,8 @@
       "Bash(find node_modules -name playwright* -type d)",
       "Bash(rm -rf /Users/anubis/Library/Caches/ms-playwright/__dirlock 2)",
       "Bash(/dev/null npx:*)",
-      "Bash(curl -s http://localhost:5173/)"
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(/dev/null find:*)"
     ]
   },
   "enabledPlugins": {
