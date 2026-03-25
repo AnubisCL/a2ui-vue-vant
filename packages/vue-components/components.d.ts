@@ -17,6 +17,7 @@ declare module 'vue' {
     Badge: typeof import('./src/components/common/Badge.vue')['default']
     Button: typeof import('./src/components/input/Button.vue')['default']
     Card: typeof import('./src/components/container/Card.vue')['default']
+    Chart: typeof import('./src/components/display/Chart.vue')['default']
     CheckBox: typeof import('./src/components/input/CheckBox.vue')['default']
     ChoicePicker: typeof import('./src/components/input/ChoicePicker.vue')['default']
     Column: typeof import('./src/components/layout/Column.vue')['default']

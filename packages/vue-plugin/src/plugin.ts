@@ -62,6 +62,7 @@ export function createA2UI(options: A2UIPluginOptions = {}) {
       Video: Components.Video,
       AudioPlayer: Components.AudioPlayer,
       Divider: Components.Divider,
+      Chart: Components.Chart,
 
       // Input
       Button: Components.Button,
@@ -112,6 +113,7 @@ export function createA2UI(options: A2UIPluginOptions = {}) {
         app.component('A2uiVideo', Components.Video)
         app.component('A2uiAudioPlayer', Components.AudioPlayer)
         app.component('A2uiDivider', Components.Divider)
+        app.component('A2uiChart', Components.Chart)
         app.component('A2uiButton', Components.Button)
         app.component('A2uiTextField', Components.TextField)
         app.component('A2uiCheckBox', Components.CheckBox)
