@@ -50,6 +50,8 @@ const { componentStore } = useA2UI()
 
 const renderNodes = computed((): ComponentTreeNode[] => {
   const components = componentStore.value[props.surfaceId]
+  console.log('[Renderer] Surface:', props.surfaceId, 'Components:', components ? Object.keys(components) : 'none')
+
   if (!components || Object.keys(components).length === 0) return []
 
   // 构建组件树
@@ -76,11 +78,15 @@ const renderNodes = computed((): ComponentTreeNode[] => {
     }
   }
 
+  console.log('[Renderer] Rendering', rootNodes.length, 'root nodes')
   return rootNodes
 })
 
 const getComponentType = (type: string): Component | string => {
   const component = componentRegistry?.get(type)
+  if (!component) {
+    console.warn('[Renderer] Unknown component type:', type)
+  }
   return component || type
 }
 

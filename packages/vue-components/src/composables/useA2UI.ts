@@ -59,8 +59,8 @@ export function setGlobalState(state: {
 function parseMessage(message: string): A2UIMessageType | null {
   try {
     return JSON.parse(message.trim())
-  } catch {
-    console.error('Failed to parse message:', message)
+  } catch (e) {
+    console.error('Failed to parse message:', message.substring(0, 200), '...')
     return null
   }
 }
@@ -88,6 +88,8 @@ export function useA2UI(options: UseA2UIOptions = {}): UseA2UIReturn {
     const parsedMsg = typeof message === 'string' ? parseMessage(message) : message
     if (!parsedMsg) return
 
+    console.log('[A2UI] Received message:', parsedMsg.type, parsedMsg.surfaceId, parsedMsg.componentId || '')
+
     const msg = parsedMsg as A2UIMessageType & { surfaceId: string; componentId?: string }
 
     // Route message to appropriate handler
@@ -96,15 +98,19 @@ export function useA2UI(options: UseA2UIOptions = {}): UseA2UIReturn {
       case 'createSurface':
         // Create surface
         if (msg.surfaceId) {
-          // Clear existing surface components first - create new object to trigger reactivity
-          globalState.componentStore.value = {
-            ...globalState.componentStore.value,
-            [msg.surfaceId]: {},
+          // Only clear components if this is a NEW surface (not an update)
+          const isNewSurface = !globalState.surfaces.value.includes(msg.surfaceId)
+          if (isNewSurface) {
+            // Clear existing surface components first - create new object to trigger reactivity
+            globalState.componentStore.value = {
+              ...globalState.componentStore.value,
+              [msg.surfaceId]: {},
+            }
+            globalState.surfaces.value = [...globalState.surfaces.value, msg.surfaceId]
+          } else {
+            console.log('[A2UI] Surface exists, preserving components')
           }
 
-          if (!globalState.surfaces.value.includes(msg.surfaceId)) {
-            globalState.surfaces.value = [...globalState.surfaces.value, msg.surfaceId]
-          }
           if (!globalState.activeSurface.value) {
             globalState.activeSurface.value = msg.surfaceId
           }
@@ -130,6 +136,7 @@ export function useA2UI(options: UseA2UIOptions = {}): UseA2UIReturn {
       case 'component':
         // Add/update component
         if (msg.surfaceId && msg.componentId && msg.component) {
+          console.log('[A2UI] Adding component:', msg.componentId, 'type:', msg.component.type)
           // Create new object to trigger Vue reactivity
           const currentSurface = globalState.componentStore.value[msg.surfaceId] || {}
           globalState.componentStore.value = {
@@ -143,6 +150,7 @@ export function useA2UI(options: UseA2UIOptions = {}): UseA2UIReturn {
               },
             },
           }
+          console.log('[A2UI] Component store now has:', Object.keys(globalState.componentStore.value[msg.surfaceId] || {}).length, 'components')
 
           // Use surface manager if available
           if (globalState.surfaceManager) {
