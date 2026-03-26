@@ -278,6 +278,9 @@ const sendSSE = async (message: string) => {
   sending.value = true
   logMessage('sent', message)
 
+  let buffer = ''
+  let messageCount = 0
+
   try {
     const response = await fetch(
       `${backendUrl.value}/api/chat/stream?message=${encodeURIComponent(message)}`
@@ -295,18 +298,37 @@ const sendSSE = async (message: string) => {
       if (done) break
 
       const text = decoder.decode(value)
+      console.log('[SSE] Chunk received, length:', text.length, 'buffer before:', buffer.length)
+      buffer += text
 
-      // Parse SSE format: id:..., event:..., data:{...}
-      const lines = text.split('\n')
+      // Process complete lines in buffer
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || '' // Keep incomplete last line in buffer
+
       for (const line of lines) {
         if (line.startsWith('data:')) {
           const json = line.substring(5).trim()
           if (json) {
-            logMessage('recv', json)
+            messageCount++
+            console.log('[SSE] Processing message #' + messageCount)
+            logMessage('recv', json.substring(0, 50) + '...')
             handleMessage(json + '\n')
           }
         }
         // Ignore other SSE lines (id:, event:, empty lines)
+      }
+    }
+
+    console.log('[SSE] Stream complete, total messages:', messageCount, 'remaining buffer:', buffer.length)
+
+    // Process any remaining data in buffer
+    if (buffer.startsWith('data:')) {
+      const json = buffer.substring(5).trim()
+      if (json) {
+        messageCount++
+        console.log('[SSE] Processing remaining message #' + messageCount)
+        logMessage('recv', json.substring(0, 50) + '...')
+        handleMessage(json + '\n')
       }
     }
   } catch (error) {
