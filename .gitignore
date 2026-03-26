@@ -42,4 +42,4 @@ coverage/
 *.tsbuildinfo
 
 target/
-.claude/*
+.claude/
