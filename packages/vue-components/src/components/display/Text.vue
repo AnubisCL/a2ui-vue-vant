@@ -31,7 +31,12 @@ const md = new MarkdownIt({
 })
 
 // 根据大小决定 HTML 标签
+// Note: When markdown is enabled, use div instead of p to allow block-level content
 const tag = computed(() => {
+  // For markdown content, always use div to avoid browser auto-closing <p> tags
+  if (props.markdown) {
+    return 'div'
+  }
   const sizeTagMap: Record<string, string> = {
     small: 'span',
     medium: 'p',

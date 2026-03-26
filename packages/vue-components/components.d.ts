@@ -24,6 +24,7 @@ declare module 'vue' {
     DateTimeInput: typeof import('./src/components/input/DateTimeInput.vue')['default']
     Divider: typeof import('./src/components/display/Divider.vue')['default']
     Empty: typeof import('./src/components/common/Empty.vue')['default']
+    Form: typeof import('./src/components/input/Form.vue')['default']
     Icon: typeof import('./src/components/display/Icon.vue')['default']
     Image: typeof import('./src/components/display/Image.vue')['default']
     List: typeof import('./src/components/layout/List.vue')['default']

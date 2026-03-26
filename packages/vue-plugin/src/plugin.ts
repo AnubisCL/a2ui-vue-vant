@@ -71,6 +71,7 @@ export function createA2UI(options: A2UIPluginOptions = {}) {
       DateTimeInput: Components.DateTimeInput,
       ChoicePicker: Components.ChoicePicker,
       Slider: Components.Slider,
+      Form: Components.Form,
 
       // Container
       Card: Components.Card,
@@ -120,6 +121,7 @@ export function createA2UI(options: A2UIPluginOptions = {}) {
         app.component('A2uiDateTimeInput', Components.DateTimeInput)
         app.component('A2uiChoicePicker', Components.ChoicePicker)
         app.component('A2uiSlider', Components.Slider)
+        app.component('A2uiForm', Components.Form)
         app.component('A2uiCard', Components.Card)
         app.component('A2uiTabs', Components.Tabs)
         app.component('A2uiModal', Components.Modal)
