@@ -25,6 +25,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../examples/ComponentsDemo.vue'),
     meta: { title: '组件演示' },
   },
+  {
+    path: '/backend',
+    name: 'backend',
+    component: () => import('../examples/BackendDemo.vue'),
+    meta: { title: '后端对接演示' },
+  },
 ]
 
 const router = createRouter({

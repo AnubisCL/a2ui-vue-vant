@@ -16,6 +16,9 @@
       <van-tabbar-item name="components" icon="apps-o">
         组件演示
       </van-tabbar-item>
+      <van-tabbar-item name="backend" icon="cluster-o">
+        后端对接
+      </van-tabbar-item>
     </van-tabbar>
   </div>
 </template>
@@ -31,6 +34,7 @@ const route = useRoute()
 const activeTab = computed(() => {
   if (route.path === '/chart') return 'chart'
   if (route.path === '/components') return 'components'
+  if (route.path === '/backend') return 'backend'
   return 'streaming'
 })
 
