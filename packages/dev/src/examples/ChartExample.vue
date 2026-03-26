@@ -3,30 +3,61 @@
     <!-- Header -->
     <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
       <h1 class="text-xl font-bold text-gray-800 mb-2">📊 ECharts 图表演示</h1>
-      <p class="text-sm text-gray-500">通过 A2UI 协议动态渲染图表</p>
+      <p class="text-sm text-gray-500">通过 A2UI 协议动态渲染图表（流式发送）</p>
     </div>
 
     <!-- Controls -->
     <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
       <div class="flex flex-wrap gap-2 mb-4">
-        <van-button type="primary" size="small" @click="startLineChartDemo">
+        <van-button type="primary" size="small" :disabled="isStreaming" @click="startLineChartDemo">
           📈 折线图
         </van-button>
-        <van-button type="success" size="small" @click="startBarChartDemo">
+        <van-button type="success" size="small" :disabled="isStreaming" @click="startBarChartDemo">
           📊 柱状图
         </van-button>
-        <van-button type="warning" size="small" @click="startPieChartDemo">
+        <van-button type="warning" size="small" :disabled="isStreaming" @click="startPieChartDemo">
           🥧 饼图
         </van-button>
-        <van-button type="default" size="small" @click="startStreamingDemo">
+        <van-button type="default" size="small" :disabled="isStreaming" @click="startStreamingDemo">
           🌊 流式更新
         </van-button>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <label class="text-sm text-gray-600">流式速度:</label>
+        <van-slider v-model="streamSpeed" :min="50" :max="500" :step="50" class="flex-1" />
+        <span class="text-sm text-gray-500 w-16">{{ streamSpeed }}ms</span>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+      <div class="flex items-center gap-2">
+        <van-loading v-if="isStreaming" type="spinner" size="16" />
+        <span :class="isStreaming ? 'text-blue-500' : 'text-gray-400'" class="text-sm">
+          {{ isStreaming ? '正在流式发送消息...' : '等待选择演示' }}
+        </span>
+        <span v-if="messageCount > 0" class="text-xs text-gray-400 ml-auto">
+          已发送 {{ messageCount }} 条消息
+        </span>
       </div>
     </div>
 
     <!-- A2UI Renderer -->
     <div class="bg-white rounded-xl shadow-sm p-4 min-h-[400px]">
       <A2uiRenderer :surface-id="currentSurface" @event="handleComponentEvent" />
+    </div>
+
+    <!-- Message Log -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mt-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold text-gray-700">消息日志</h3>
+        <van-button size="mini" @click="clearLog">清空</van-button>
+      </div>
+      <div class="bg-gray-900 rounded-lg p-3 max-h-[300px] overflow-auto">
+        <pre v-for="(log, index) in messageLogs" :key="index" class="text-xs text-green-400 font-mono mb-1">{{ log }}</pre>
+        <pre v-if="messageLogs.length === 0" class="text-xs text-gray-500">等待消息...</pre>
+      </div>
     </div>
   </div>
 </template>
@@ -37,18 +68,45 @@ import { showToast } from 'vant'
 import { A2uiRenderer, useA2UI } from '@a2ui/vue-plugin'
 
 const currentSurface = ref('chart-demo')
+const streamSpeed = ref(150)
+const isStreaming = ref(false)
+const messageCount = ref(0)
+const messageLogs = ref<string[]>([])
+
 const { handleMessage, clearSurface } = useA2UI()
 
-const sendMessage = (message: object) => {
-  handleMessage(JSON.stringify(message) + '\n')
+// 日志记录
+const logMessage = (msg: string) => {
+  const timestamp = new Date().toLocaleTimeString()
+  messageLogs.value.unshift(`[${timestamp}] ${msg}`)
+  if (messageLogs.value.length > 50) {
+    messageLogs.value.pop()
+  }
+}
+
+// 清空日志
+const clearLog = () => {
+  messageLogs.value = []
+}
+
+// 发送流式消息
+const sendStreamingMessage = async (message: object) => {
+  isStreaming.value = true
+  const msgStr = JSON.stringify(message)
+  logMessage(msgStr.length > 100 ? msgStr.substring(0, 100) + '...' : msgStr)
+  handleMessage(msgStr + '\n')
+  messageCount.value++
+  await new Promise(r => setTimeout(r, streamSpeed.value))
 }
 
 // 折线图演示
-const startLineChartDemo = () => {
+const startLineChartDemo = async () => {
   clearSurface(currentSurface.value)
-  sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '折线图演示' })
+  messageCount.value = 0
 
-  sendMessage({
+  await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '折线图演示' })
+
+  await sendStreamingMessage({
     type: 'component',
     surfaceId: currentSurface.value,
     componentId: 'title',
@@ -58,7 +116,7 @@ const startLineChartDemo = () => {
     }
   })
 
-  sendMessage({
+  await sendStreamingMessage({
     type: 'component',
     surfaceId: currentSurface.value,
     componentId: 'line-chart',
@@ -87,15 +145,18 @@ const startLineChartDemo = () => {
     }
   })
 
+  isStreaming.value = false
   showToast('折线图演示已加载')
 }
 
 // 柱状图演示
-const startBarChartDemo = () => {
+const startBarChartDemo = async () => {
   clearSurface(currentSurface.value)
-  sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '柱状图演示' })
+  messageCount.value = 0
 
-  sendMessage({
+  await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '柱状图演示' })
+
+  await sendStreamingMessage({
     type: 'component',
     surfaceId: currentSurface.value,
     componentId: 'title',
@@ -105,7 +166,7 @@ const startBarChartDemo = () => {
     }
   })
 
-  sendMessage({
+  await sendStreamingMessage({
     type: 'component',
     surfaceId: currentSurface.value,
     componentId: 'bar-chart',
@@ -141,15 +202,18 @@ const startBarChartDemo = () => {
     }
   })
 
+  isStreaming.value = false
   showToast('柱状图演示已加载')
 }
 
 // 饼图演示
-const startPieChartDemo = () => {
+const startPieChartDemo = async () => {
   clearSurface(currentSurface.value)
-  sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '饼图演示' })
+  messageCount.value = 0
 
-  sendMessage({
+  await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '饼图演示' })
+
+  await sendStreamingMessage({
     type: 'component',
     surfaceId: currentSurface.value,
     componentId: 'title',
@@ -159,7 +223,7 @@ const startPieChartDemo = () => {
     }
   })
 
-  sendMessage({
+  await sendStreamingMessage({
     type: 'component',
     surfaceId: currentSurface.value,
     componentId: 'pie-chart',
@@ -193,15 +257,18 @@ const startPieChartDemo = () => {
     }
   })
 
+  isStreaming.value = false
   showToast('饼图演示已加载')
 }
 
 // 流式更新演示
 const startStreamingDemo = async () => {
   clearSurface(currentSurface.value)
-  sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '流式更新演示' })
+  messageCount.value = 0
 
-  sendMessage({
+  await sendStreamingMessage({ type: 'surface', surfaceId: currentSurface.value, name: '流式更新演示' })
+
+  await sendStreamingMessage({
     type: 'component',
     surfaceId: currentSurface.value,
     componentId: 'title',
@@ -212,7 +279,7 @@ const startStreamingDemo = async () => {
   })
 
   // 初始图表
-  sendMessage({
+  await sendStreamingMessage({
     type: 'component',
     surfaceId: currentSurface.value,
     componentId: 'stream-chart',
@@ -240,7 +307,7 @@ const startStreamingDemo = async () => {
     categories.push(`${i}秒`)
     data.push(Math.floor(Math.random() * 100) + 50)
 
-    sendMessage({
+    await sendStreamingMessage({
       type: 'component',
       surfaceId: currentSurface.value,
       componentId: 'stream-chart',
@@ -257,17 +324,18 @@ const startStreamingDemo = async () => {
     })
   }
 
+  isStreaming.value = false
   showToast('流式更新演示完成')
 }
 
 // 事件处理
-const handleComponentEvent = (componentId: string, eventType: string, payload?: unknown) => {
-  console.log('Event:', componentId, eventType, payload)
+const handleComponentEvent = (componentId: string, eventType: string, _payload?: unknown) => {
+  logMessage(`事件: ${componentId} - ${eventType}`)
 }
 
 // 初始化
 onMounted(() => {
-  sendMessage({ type: 'surface', surfaceId: currentSurface.value, name: '图表演示' })
+  handleMessage(JSON.stringify({ type: 'surface', surfaceId: currentSurface.value, name: '图表演示' }) + '\n')
   startLineChartDemo()
 })
 </script>
