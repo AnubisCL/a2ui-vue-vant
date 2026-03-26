@@ -327,6 +327,45 @@ export interface SliderProps {
 }
 
 /**
+ * Form field definition
+ */
+export interface FormField {
+  /** Field name */
+  name: string
+  /** Field label */
+  label?: string
+  /** Field type */
+  type?: 'text' | 'textarea' | 'select' | 'date' | 'number' | 'checkbox'
+  /** Whether the field is required */
+  required?: boolean
+  /** Default value */
+  defaultValue?: unknown
+  /** Field options (for select type) */
+  options?: {
+    /** Placeholder text */
+    placeholder?: string
+    /** Number of rows for textarea */
+    rows?: number
+    /** Select options */
+    options?: Array<{ value: string; label: string }>
+  }
+}
+
+/**
+ * Form component
+ */
+export interface FormProps {
+  /** Form fields */
+  fields: ValueReference<FormField[]>
+  /** Submit button label */
+  submitLabel?: ValueReference<string>
+  /** Form action URL */
+  action?: string
+  /** Submit action */
+  onSubmit?: string
+}
+
+/**
  * ========================================
  * CONTAINER COMPONENTS
  * ========================================
@@ -473,6 +512,7 @@ export interface ComponentPropsMap {
   DateTimeInput: DateTimeInputProps
   ChoicePicker: ChoicePickerProps
   Slider: SliderProps
+  Form: FormProps
 
   // Container
   Card: CardProps
