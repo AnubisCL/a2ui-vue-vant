@@ -40,3 +40,5 @@ coverage/
 
 # Temp files
 *.tsbuildinfo
+
+target/
