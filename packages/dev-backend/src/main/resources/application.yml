@@ -9,20 +9,30 @@ spring:
 a2ui:
   # LLM Provider Configuration
   llm:
-    # LLM provider type: openai, azure-openai, etc.
-    provider: openai
+    # LLM provider type: openai, glm, azure-openai, etc.
+    provider: glm
     # API key for the LLM provider (set via environment variable for production)
-    api-key: ${OPENAI_API_KEY:your-api-key-here}
-    # Model to use (gpt-4o-mini, gpt-4-turbo-preview, gpt-4, etc.)
-    model: gpt-4o-mini
+    api-key: ${GLM_AI_API_KEY}
+    # Model to use (glm-4, glm-4-plus, glm-4v, glm-4-flash, etc.)
+    model: glm-5
+    # Base URL for GLM API
+    base-url: https://open.bigmodel.cn/api/coding/paas/v4
     # Temperature for response generation (0.0 - 2.0)
     temperature: 0.7
     # Maximum tokens in response
     max-tokens: 4096
     # Request timeout in milliseconds
-    timeout: 60000
-    # Optional: Base URL for custom API endpoints
-    # base-url: https://api.openai.com/v1
+    timeout: 120000
+    # Enable streaming
+    streaming: true
+
+  # Demo Mode Configuration (when LLM is not available or API key is not set)
+  demo:
+    enabled: true
+    streaming-delay-ms: 100
+    enable-charts: true
+    enable-forms: true
+    enable-tables: true
 
   # Transport Configuration
   transport:
@@ -34,14 +44,6 @@ a2ui:
     websocket:
       enabled: true
       endpoint: /ws/chat
-
-  # Demo Mode Configuration (when LLM is not available)
-  demo:
-    enabled: true
-    streaming-delay-ms: 100
-    enable-charts: true
-    enable-forms: true
-    enable-tables: true
 
   # CORS Configuration
   cors:

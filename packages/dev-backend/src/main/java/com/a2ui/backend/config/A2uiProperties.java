@@ -24,9 +24,9 @@ public class A2uiProperties {
     @Data
     public static class LlmConfig {
         /**
-         * LLM provider type (openai, azure-openai, etc.)
+         * LLM provider type (openai, glm, azure-openai, etc.)
          */
-        private String provider = "openai";
+        private String provider = "glm";
 
         /**
          * API key for the LLM provider
@@ -34,9 +34,9 @@ public class A2uiProperties {
         private String apiKey;
 
         /**
-         * Model name to use
+         * Model name to use (glm-4, glm-4-plus, glm-4-flash, etc.)
          */
-        private String model = "gpt-4o-mini";
+        private String model = "glm-4";
 
         /**
          * Temperature for response generation (0.0 - 2.0)
@@ -51,12 +51,18 @@ public class A2uiProperties {
         /**
          * Request timeout in milliseconds
          */
-        private Integer timeout = 60000;
+        private Integer timeout = 120000;
 
         /**
          * Base URL for API (optional, for custom endpoints)
+         * Default for GLM: https://open.bigmodel.cn/api/coding/paas/v4
          */
         private String baseUrl;
+
+        /**
+         * Enable streaming mode
+         */
+        private boolean streaming = true;
 
         /**
          * Check if LLM is configured (API key is set)

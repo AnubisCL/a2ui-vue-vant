@@ -182,7 +182,11 @@ public class OrderScenario implements DemoScenario {
                 Flux.fromIterable(createOrderCards(surfaceId))
                     .delayElements(Duration.ofMillis(300)),
 
-                // Step 5: Show divider
+                // Step 5: Show completion
+                Flux.just(createSuccessText(surfaceId, "✅ 已加载 " + SAMPLE_ORDERS.size() + " 个订单"))
+                    .delayElements(Duration.ofMillis(200)),
+
+                // Step 6: Show divider
                 Flux.just(createDivider(surfaceId))
                     .delayElements(Duration.ofMillis(100))
             );
@@ -196,6 +200,18 @@ public class OrderScenario implements DemoScenario {
                 "content", "⏳ " + message,
                 "size", "medium",
                 "color", "#1890ff"
+            ))
+        ));
+    }
+
+    private String createSuccessText(String surfaceId, String message) {
+        return toJson(ComponentMessage.append(surfaceId,
+            generateId("success"),
+            ComponentSpec.of("Text", Map.of(
+                "content", message,
+                "size", "medium",
+                "color", "#52c41a",
+                "weight", "medium"
             ))
         ));
     }

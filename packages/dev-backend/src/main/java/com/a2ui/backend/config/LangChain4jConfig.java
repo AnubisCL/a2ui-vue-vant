@@ -1,15 +1,19 @@
 package com.a2ui.backend.config;
 
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
-import dev.langchain4j.model.openai.OpenAiChatModel;
+import com.a2ui.backend.llm.A2uiAssistant;
+import dev.langchain4j.http.client.jdk.JdkHttpClientBuilder;
+import dev.langchain4j.memory.chat.ChatMemoryProvider;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
+import dev.langchain4j.service.AiServices;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
 
@@ -17,72 +21,66 @@ import java.time.Duration;
  * LangChain4j configuration for LLM integration.
  *
  * Creates beans for chat and streaming models when API key is configured.
+ * Supports GLM (智谱) and OpenAI compatible APIs.
  * Falls back to demo mode when LLM is not available.
  */
 @Slf4j
 @Configuration
-@RequiredArgsConstructor
 @EnableConfigurationProperties(A2uiProperties.class)
+@RequiredArgsConstructor
 public class LangChain4jConfig {
 
     private final A2uiProperties a2uiProperties;
 
     /**
-     * Creates a ChatLanguageModel bean for synchronous LLM calls.
-     * Only created when a2ui.llm.api-key is configured.
+     * Creates an A2uiAssistant bean using AiServices builder.
+     * This provides a streaming-capable assistant with the A2UI system prompt.
      */
     @Bean
     @ConditionalOnProperty(prefix = "a2ui.llm", name = "api-key")
-    public ChatLanguageModel chatLanguageModel() {
+    public A2uiAssistant a2uiAssistant() {
         A2uiProperties.LlmConfig llmConfig = a2uiProperties.getLlm();
 
-        log.info("Configuring ChatLanguageModel with provider: {}, model: {}",
-            llmConfig.getProvider(), llmConfig.getModel());
+        String baseUrl = llmConfig.getBaseUrl() != null && !llmConfig.getBaseUrl().isEmpty()
+            ? llmConfig.getBaseUrl()
+            : "https://open.bigmodel.cn/api/coding/paas/v4";
 
-        OpenAiChatModel.OpenAiChatModelBuilder builder = OpenAiChatModel.builder()
+        Duration timeout = Duration.ofMillis(llmConfig.getTimeout() != null ? llmConfig.getTimeout() : 120000);
+        Double temperature = llmConfig.getTemperature() != null ? llmConfig.getTemperature() : 0.7;
+
+        log.info("Creating A2uiAssistant with model: {}, baseUrl: {}", llmConfig.getModel(), baseUrl);
+
+        // Build HTTP client with timeout
+        JdkHttpClientBuilder httpClientBuilder = new JdkHttpClientBuilder()
+            .connectTimeout(timeout)
+            .readTimeout(timeout);
+
+        // Build streaming model
+        StreamingChatModel streamingModel = OpenAiStreamingChatModel.builder()
+            .httpClientBuilder(httpClientBuilder)
             .apiKey(llmConfig.getApiKey())
             .modelName(llmConfig.getModel())
-            .temperature(llmConfig.getTemperature())
-            .maxTokens(llmConfig.getMaxTokens());
+            .baseUrl(baseUrl)
+            .temperature(temperature)
+            .logRequests(true)
+            .logResponses(true)
+            .build();
 
-        if (llmConfig.getTimeout() != null) {
-            builder.timeout(Duration.ofMillis(llmConfig.getTimeout()));
-        }
+        log.info("Creating A2uiAssistant with streaming model");
 
-        if (llmConfig.getBaseUrl() != null && !llmConfig.getBaseUrl().isEmpty()) {
-            builder.baseUrl(llmConfig.getBaseUrl());
-        }
-
-        log.info("ChatLanguageModel configured successfully");
-        return builder.build();
+        return AiServices.builder(A2uiAssistant.class)
+            .streamingChatModel(streamingModel)
+            .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(100))
+            .build();
     }
 
     /**
-     * Creates a StreamingChatModel bean for streaming LLM responses.
-     * Only created when a2ui.llm.api-key is configured.
+     * Creates a WebClient bean for custom HTTP calls if needed.
      */
     @Bean
-    @ConditionalOnProperty(prefix = "a2ui.llm", name = "api-key")
-    public StreamingChatLanguageModel streamingChatLanguageModel() {
-        A2uiProperties.LlmConfig llmConfig = a2uiProperties.getLlm();
-
-        log.info("Configuring StreamingChatModel with provider: {}, model: {}",
-            llmConfig.getProvider(), llmConfig.getModel());
-
-        OpenAiStreamingChatModel.OpenAiStreamingChatModelBuilder builder = OpenAiStreamingChatModel.builder()
-            .apiKey(llmConfig.getApiKey())
-            .modelName(llmConfig.getModel())
-            .temperature(llmConfig.getTemperature());
-
-        if (llmConfig.getTimeout() != null) {
-            builder.timeout(Duration.ofMillis(llmConfig.getTimeout()));
-        }
-
-        if (llmConfig.getBaseUrl() != null && !llmConfig.getBaseUrl().isEmpty()) {
-            builder.baseUrl(llmConfig.getBaseUrl());
-        }
-
-        log.info("StreamingChatModel configured successfully");
-        return builder.build();
+    public WebClient webClient() {
+        return WebClient.builder()
+            .defaultHeader("Content-Type", "application/json")
+            .build();
     }
 }

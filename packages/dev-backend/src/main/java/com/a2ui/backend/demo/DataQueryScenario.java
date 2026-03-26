@@ -129,7 +129,17 @@ public class DataQueryScenario implements DemoScenario {
                     Flux.just(createInfoText(surfaceId, "📋 正在生成详细数据表..."))
                         .delayElements(Duration.ofMillis(500)),
                     Flux.fromIterable(createDataTableCard(surfaceId, filters))
-                        .delayElements(Duration.ofMillis(400))
+                        .delayElements(Duration.ofMillis(400)),
+                    // Final completion message
+                    Flux.just(createSuccessText(surfaceId, "✅ 数据查询完成！"))
+                        .delayElements(Duration.ofMillis(300))
+                );
+            } else {
+                // Add completion for direct chart mode
+                chartFlow = Flux.concat(
+                    chartFlow,
+                    Flux.just(createSuccessText(surfaceId, "✅ 图表生成完成！"))
+                        .delayElements(Duration.ofMillis(300))
                 );
             }
 
@@ -156,6 +166,18 @@ public class DataQueryScenario implements DemoScenario {
                 "content", message,
                 "size", "small",
                 "color", "#666666"
+            ))
+        ));
+    }
+
+    private String createSuccessText(String surfaceId, String message) {
+        return toJson(ComponentMessage.append(surfaceId,
+            generateId("success"),
+            ComponentSpec.of("Text", Map.of(
+                "content", message,
+                "size", "medium",
+                "color", "#52c41a",
+                "weight", "medium"
             ))
         ));
     }
