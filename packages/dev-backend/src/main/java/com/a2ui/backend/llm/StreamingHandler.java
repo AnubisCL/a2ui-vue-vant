@@ -75,8 +75,8 @@ public class StreamingHandler {
             sessionId, a2uiAssistant != null);
 
         // Check if we should bypass demo scenarios
-        boolean shouldBypassDemo = !a2uiProperties.getDemo().isBypassDemo()
-            && a2uiAssistant != null;
+        boolean shouldBypassDemo = a2uiProperties.getDemo().isBypassDemo()
+            && (agentCoordinator != null || a2uiAssistant != null);
 
         // 1. Check demo scenarios first (unless bypassDemo is enabled)
         if (!shouldBypassDemo) {

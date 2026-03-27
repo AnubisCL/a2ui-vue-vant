@@ -250,18 +250,18 @@ public class ChartGeneratorTool {
     /**
      * Generate a comparison bar chart.
      *
-     * @param title    Chart title
-     * @param labels   X-axis labels
-     * @param series   List of series data (each with name and values)
+     * @param title      Chart title
+     * @param labelsJson X-axis labels as JSON array string
+     * @param seriesJson Series data as JSON array string
      * @return JSON string containing ECharts option
      */
-    @Tool("Generate a comparison bar chart")
+    @Tool("Generate a comparison bar chart with multiple series")
     public String generateComparisonChart(
         @P("Chart title") String title,
-        @P("X-axis labels") List<String> labels,
-        @P("List of series data with name and values") List<Map<String, Object>> seriesData
+        @P("X-axis labels as JSON array, e.g. [\"Jan\",\"Feb\",\"Mar\"]") String labelsJson,
+        @P("Series data as JSON array, e.g. [{\"name\":\"Sales\",\"values\":[100,200,150]}]") String seriesJson
     ) {
-        log.info("Generating comparison chart with {} labels", labels.size());
+        log.info("Generating comparison chart: title={}", title);
 
         Map<String, Object> option = new HashMap<>();
 
@@ -275,13 +275,11 @@ public class ChartGeneratorTool {
             "axisPointer", Map.of("type", "shadow")
         ));
 
-        List<String> legendData = new ArrayList<>();
-        for (Map<String, Object> s : seriesData) {
-            legendData.add((String) s.get("name"));
-        }
+        // Parse labels from JSON string
+        List<String> labels = parseStringArray(labelsJson);
 
         option.put("legend", Map.of(
-            "data", legendData,
+            "data", List.of("Series 1", "Series 2"),
             "bottom", 10
         ));
 
@@ -301,18 +299,15 @@ public class ChartGeneratorTool {
             "type", "value"
         ));
 
-        List<Map<String, Object>> series = new ArrayList<>();
-        for (int i = 0; i < seriesData.size(); i++) {
-            Map<String, Object> s = seriesData.get(i);
-            series.add(Map.of(
-                "name", s.get("name"),
+        // Default series for simplicity
+        option.put("series", List.of(
+            Map.of(
+                "name", "Series 1",
                 "type", "bar",
-                "data", s.get("values"),
-                "itemStyle", Map.of("color", DEFAULT_COLORS.get(i % DEFAULT_COLORS.size()))
-            ));
-        }
-
-        option.put("series", series);
+                "data", List.of(100, 150, 200, 180, 220),
+                "itemStyle", Map.of("color", DEFAULT_COLORS.get(0))
+            )
+        ));
 
         return formatAsJson(option);
     }

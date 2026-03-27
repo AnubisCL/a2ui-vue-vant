@@ -29,6 +29,8 @@ a2ui:
   # Demo Mode Configuration (when LLM is not available or API key is not set)
   demo:
     enabled: true
+    # When true, always use LLM even if a demo scenario matches (for testing LLM)
+    bypass-demo: true
     streaming-delay-ms: 100
     enable-charts: true
     enable-forms: true

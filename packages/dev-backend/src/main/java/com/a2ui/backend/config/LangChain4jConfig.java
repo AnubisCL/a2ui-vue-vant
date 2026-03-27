@@ -32,16 +32,19 @@ import java.time.Duration;
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(A2uiProperties.class)
-@RequiredArgsConstructor
 public class LangChain4jConfig {
 
     private final A2uiProperties a2uiProperties;
+    private final DataQueryTool dataQueryTool;
+    private final ChartGeneratorTool chartGeneratorTool;
 
-    @Autowired
-    private DataQueryTool dataQueryTool;
-
-    @Autowired
-    private ChartGeneratorTool chartGeneratorTool;
+    public LangChain4jConfig(A2uiProperties a2uiProperties,
+                             DataQueryTool dataQueryTool,
+                             ChartGeneratorTool chartGeneratorTool) {
+        this.a2uiProperties = a2uiProperties;
+        this.dataQueryTool = dataQueryTool;
+        this.chartGeneratorTool = chartGeneratorTool;
+    }
 
     /**
      * Creates an A2uiAssistant bean using AiServices builder.
@@ -138,16 +141,19 @@ public class LangChain4jConfig {
     }
 
     /**
-     * Creates GeneralAgent bean using AiServices builder with tools
+     * Creates GeneralAgent bean using AiServices builder with tools.
+     * Note: Pass individual tool instances directly, not a wrapper class.
      */
     @Bean
-    public GeneralAgent generalAgent(GeneralAgentTools tools) {
+    public GeneralAgent generalAgent() {
         StreamingChatModel model = createStreamingChatModel();
+
+        log.info("Creating GeneralAgent with tools: DataQueryTool, ChartGeneratorTool");
 
         return AiServices.builder(GeneralAgent.class)
             .streamingChatModel(model)
             .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(100))
-            .tools(tools)
+            .tools(dataQueryTool, chartGeneratorTool)
             .build();
     }
 
