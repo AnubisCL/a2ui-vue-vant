@@ -1,14 +1,19 @@
 package com.a2ui.backend.config;
 
+import com.a2ui.backend.agent.a2ui.A2UIAgent;
+import com.a2ui.backend.agent.general.GeneralAgent;
+import com.a2ui.backend.agent.general.GeneralAgentTools;
 import com.a2ui.backend.llm.A2uiAssistant;
+import com.a2ui.backend.tools.ChartGeneratorTool;
+import com.a2ui.backend.tools.DataQueryTool;
 import dev.langchain4j.http.client.jdk.JdkHttpClientBuilder;
-import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +36,12 @@ import java.time.Duration;
 public class LangChain4jConfig {
 
     private final A2uiProperties a2uiProperties;
+
+    @Autowired
+    private DataQueryTool dataQueryTool;
+
+    @Autowired
+    private ChartGeneratorTool chartGeneratorTool;
 
     /**
      * Creates an A2uiAssistant bean using AiServices builder.
@@ -66,11 +77,77 @@ public class LangChain4jConfig {
             .logResponses(true)
             .build();
 
-        log.info("Creating A2uiAssistant with streaming model");
+        log.info("Creating A2uiAssistant with streaming model and tools: DataQueryTool, ChartGeneratorTool");
 
         return AiServices.builder(A2uiAssistant.class)
             .streamingChatModel(streamingModel)
             .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(100))
+            .tools(dataQueryTool, chartGeneratorTool)
+            .build();
+    }
+
+    /**
+     * Creates a helper StreamingChatModel for agents
+     */
+    private StreamingChatModel createStreamingChatModel() {
+        A2uiProperties.LlmConfig llmConfig = a2uiProperties.getLlm();
+
+        String baseUrl = llmConfig.getBaseUrl() != null && !llmConfig.getBaseUrl().isEmpty()
+            ? llmConfig.getBaseUrl()
+            : "https://open.bigmodel.cn/api/coding/paas/v4";
+
+        Duration timeout = Duration.ofMillis(llmConfig.getTimeout() != null ? llmConfig.getTimeout() : 120000);
+        Double temperature = llmConfig.getTemperature() != null ? llmConfig.getTemperature() : 0.7;
+
+        log.info("Creating StreamingChatModel: {}, baseUrl: {}", llmConfig.getModel(), baseUrl);
+
+        JdkHttpClientBuilder httpClientBuilder = new JdkHttpClientBuilder()
+            .connectTimeout(timeout)
+            .readTimeout(timeout);
+
+        return OpenAiStreamingChatModel.builder()
+            .httpClientBuilder(httpClientBuilder)
+            .apiKey(llmConfig.getApiKey())
+            .modelName(llmConfig.getModel())
+            .baseUrl(baseUrl)
+            .temperature(temperature)
+            .logRequests(true)
+            .logResponses(true)
+            .build();
+    }
+
+    /**
+     * Creates GeneralAgentTools bean aggregating all tools for GeneralAgent
+     */
+    @Bean
+    public GeneralAgentTools generalAgentTools() {
+        return new GeneralAgentTools(dataQueryTool, chartGeneratorTool);
+    }
+
+    /**
+     * Creates A2UIAgent bean using AiServices builder
+     */
+    @Bean
+    public A2UIAgent a2uiAgent() {
+        StreamingChatModel model = createStreamingChatModel();
+
+        return AiServices.builder(A2UIAgent.class)
+            .streamingChatModel(model)
+            .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(50))
+            .build();
+    }
+
+    /**
+     * Creates GeneralAgent bean using AiServices builder with tools
+     */
+    @Bean
+    public GeneralAgent generalAgent(GeneralAgentTools tools) {
+        StreamingChatModel model = createStreamingChatModel();
+
+        return AiServices.builder(GeneralAgent.class)
+            .streamingChatModel(model)
+            .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(100))
+            .tools(tools)
             .build();
     }
 

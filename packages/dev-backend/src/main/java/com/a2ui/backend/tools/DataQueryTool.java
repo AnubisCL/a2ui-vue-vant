@@ -7,6 +7,8 @@ import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
+import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -15,16 +17,6 @@ import lombok.extern.slf4j.Slf4j;
  * This tool provides sample sales data that can be used by the LLM
  * to generate charts and reports. It demonstrates how to integrate
  * data retrieval capabilities with the A2UI system.
- *
- * Usage in LangChain4j:
- * <pre>
- * &#64;Tool("Query sales data for a given time period")
- * public String querySalesData(
- *     &#64;P("Start date in YYYY-MM-DD format") String startDate,
- *     &#64;P("End date in YYYY-MM-DD format") String endDate,
- *     &#64;P("Product category filter") String category
- * )
- * </pre>
  */
 @Slf4j
 @Component
@@ -93,7 +85,12 @@ public class DataQueryTool {
      * @param category  Product category filter (optional)
      * @return JSON string containing sales data
      */
-    public String querySalesData(String startDate, String endDate, String category) {
+    @Tool("Query sales data for a given time period")
+    public String querySalesData(
+        @P("Start date in YYYY-MM-DD format") String startDate,
+        @P("End date in YYYY-MM-DD format") String endDate,
+        @P("Product category filter, optional") String category
+    ) {
         log.info("Querying sales data: startDate={}, endDate={}, category={}",
             startDate, endDate, category);
 
@@ -137,7 +134,10 @@ public class DataQueryTool {
      * @param year Year to query (e.g., "2024")
      * @return JSON string containing monthly trend data
      */
-    public String queryMonthlyTrends(String year) {
+    @Tool("Query monthly sales trends for a given year")
+    public String queryMonthlyTrends(
+        @P("Year to query, e.g. 2024") String year
+    ) {
         log.info("Querying monthly trends for year: {}", year);
 
         Map<String, Object> result = new HashMap<>();
@@ -172,6 +172,7 @@ public class DataQueryTool {
      *
      * @return JSON string containing category list
      */
+    @Tool("Get available product categories")
     public String getCategories() {
         Map<String, Object> result = new HashMap<>();
         result.put("categories", SALES_BY_CATEGORY.keySet());
@@ -184,7 +185,10 @@ public class DataQueryTool {
      * @param limit Maximum number of products to return
      * @return JSON string containing top products
      */
-    public String getTopProducts(int limit) {
+    @Tool("Get top performing products by sales")
+    public String getTopProducts(
+        @P("Maximum number of products to return") int limit
+    ) {
         List<Map<String, Object>> allProducts = getAllProducts();
 
         // Sort by sales descending

@@ -7,6 +7,8 @@ import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
+import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -15,16 +17,6 @@ import lombok.extern.slf4j.Slf4j;
  * This tool generates ECharts-compatible chart option objects that can be
  * used in A2UI Chart components. It supports various chart types including
  * line, bar, pie, and combination charts.
- *
- * Usage in LangChain4j:
- * <pre>
- * &#64;Tool("Generate a chart from data")
- * public String generateChart(
- *     &#64;P("Chart type: line, bar, pie") String chartType,
- *     &#64;P("Chart title") String title,
- *     &#64;P("Data in JSON format") String data
- * )
- * </pre>
  */
 @Slf4j
 @Component
@@ -44,7 +36,12 @@ public class ChartGeneratorTool {
      * @param dataJson  Data in JSON format (will be parsed)
      * @return JSON string containing ECharts option
      */
-    public String generateChart(String chartType, String title, String dataJson) {
+    @Tool("Generate a chart from data")
+    public String generateChart(
+        @P("Chart type: line, bar, pie, area, scatter") String chartType,
+        @P("Chart title") String title,
+        @P("Data in JSON format with labels and values") String dataJson
+    ) {
         log.info("Generating chart: type={}, title={}", chartType, title);
 
         Map<String, Object> option = new HashMap<>();
@@ -103,8 +100,13 @@ public class ChartGeneratorTool {
      * @param orders   Order count values (optional)
      * @return JSON string containing ECharts option
      */
-    public String generateSalesChart(String title, List<String> months,
-                                      List<Integer> sales, List<Integer> orders) {
+    @Tool("Generate a sales performance chart with multiple metrics")
+    public String generateSalesChart(
+        @P("Chart title") String title,
+        @P("List of month labels") List<String> months,
+        @P("Sales data values") List<Integer> sales,
+        @P("Order count values, optional") List<Integer> orders
+    ) {
         log.info("Generating sales chart with {} data points", months.size());
 
         Map<String, Object> option = new HashMap<>();
@@ -183,7 +185,12 @@ public class ChartGeneratorTool {
      * @param values     Category values
      * @return JSON string containing ECharts option
      */
-    public String generatePieChart(String title, List<String> categories, List<Integer> values) {
+    @Tool("Generate a category distribution pie chart")
+    public String generatePieChart(
+        @P("Chart title") String title,
+        @P("Category labels") List<String> categories,
+        @P("Category values") List<Integer> values
+    ) {
         log.info("Generating pie chart with {} categories", categories.size());
 
         Map<String, Object> option = new HashMap<>();
@@ -248,8 +255,12 @@ public class ChartGeneratorTool {
      * @param series   List of series data (each with name and values)
      * @return JSON string containing ECharts option
      */
-    public String generateComparisonChart(String title, List<String> labels,
-                                           List<Map<String, Object>> seriesData) {
+    @Tool("Generate a comparison bar chart")
+    public String generateComparisonChart(
+        @P("Chart title") String title,
+        @P("X-axis labels") List<String> labels,
+        @P("List of series data with name and values") List<Map<String, Object>> seriesData
+    ) {
         log.info("Generating comparison chart with {} labels", labels.size());
 
         Map<String, Object> option = new HashMap<>();

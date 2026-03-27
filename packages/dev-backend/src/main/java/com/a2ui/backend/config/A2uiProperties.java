@@ -124,6 +124,12 @@ public class A2uiProperties {
         private boolean enabled = true;
 
         /**
+         * When true, always use LLM even if a demo scenario matches the query.
+         * Useful for testing LLM responses instead of demo scenarios.
+         */
+        private boolean bypassDemo = false;
+
+        /**
          * Delay between streaming messages in milliseconds
          */
         private int streamingDelayMs = 100;
