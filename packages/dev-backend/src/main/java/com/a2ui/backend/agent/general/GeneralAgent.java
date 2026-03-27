@@ -4,7 +4,9 @@ import reactor.core.publisher.Flux;
 
 /**
  * General conversation agent interface.
- * Handles dialogue, routing, data queries, and A2A calls to A2UIAgent.
+ *
+ * Handles user conversations with LLM, delegates data queries and
+ * UI generation to appropriate tools or agents.
  */
 public interface GeneralAgent {
     /**
