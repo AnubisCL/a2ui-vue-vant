@@ -1,5 +1,6 @@
 package com.a2ui.backend.llm;
 
+import com.a2ui.backend.agent.coordinator.AgentCoordinator;
 import com.a2ui.backend.config.A2uiProperties;
 import com.a2ui.backend.demo.DemoScenario;
 import com.a2ui.backend.demo.ScenarioManager;
@@ -47,6 +48,10 @@ public class StreamingHandler {
     @Autowired(required = false)
     private A2uiAssistant a2uiAssistant;
 
+    // Optional AgentCoordinator (preferred over A2uiAssistant)
+    @Autowired(required = false)
+    private AgentCoordinator agentCoordinator;
+
     /**
      * Check if LLM is available (assistant bean is present).
      */
@@ -57,8 +62,8 @@ public class StreamingHandler {
     /**
      * Generate A2UI response stream from user message.
      * Priority:
-     * 1. Demo scenarios (highest priority for common queries)
-     * 2. LLM with A2uiAssistant (if configured)
+     * 1. Demo scenarios (if LLM not configured or bypassDemo is false)
+     * 2. LLM with A2uiAssistant (if configured and bypassDemo is true or no demo match)
      * 3. Generic demo response
      *
      * @param userMessage The user's input message
@@ -69,14 +74,27 @@ public class StreamingHandler {
         log.info("Generating response for session: {}, Assistant available: {}",
             sessionId, a2uiAssistant != null);
 
-        // 1. Check demo scenarios first (highest priority)
-        Optional<DemoScenario> matchingScenario = scenarioManager.findMatchingScenario(userMessage);
-        if (matchingScenario.isPresent()) {
-            log.info("Using demo scenario: {}", matchingScenario.get().getName());
-            return executeScenario(matchingScenario.get(), userMessage, sessionId);
+        // Check if we should bypass demo scenarios
+        boolean shouldBypassDemo = !a2uiProperties.getDemo().isBypassDemo()
+            && a2uiAssistant != null;
+
+        // 1. Check demo scenarios first (unless bypassDemo is enabled)
+        if (!shouldBypassDemo) {
+            Optional<DemoScenario> matchingScenario = scenarioManager.findMatchingScenario(userMessage);
+            if (matchingScenario.isPresent()) {
+                log.info("Using demo scenario: {}", matchingScenario.get().getName());
+                return executeScenario(matchingScenario.get(), userMessage, sessionId);
+            }
+        } else {
+            log.info("Demo scenarios bypassed - using LLM");
         }
 
-        // 2. Use LLM with A2uiAssistant if available
+        // 2. Use AgentCoordinator (preferred) or A2uiAssistant (legacy)
+        if (agentCoordinator != null) {
+            log.info("Using AgentCoordinator for session: {}", sessionId);
+            return agentCoordinator.processMessage(userMessage, sessionId);
+        }
+
         if (a2uiAssistant != null) {
             return generateAssistantResponse(userMessage, sessionId);
         }
@@ -134,22 +152,184 @@ public class StreamingHandler {
 
     /**
      * Parse assistant stream output to A2UI messages.
+     * Uses a buffer to accumulate tokens until complete JSON objects are found.
      */
     private Flux<A2uiMessage> parseAssistantStream(Flux<String> stream) {
+        // Use scan to maintain buffer state across stream chunks
         return stream
-            .flatMap(text -> Flux.fromIterable(extractA2uiMessages(text)))
+            .scan(new A2uiOutputBuffer(), A2uiOutputBuffer::append)
+            .flatMap(buffer -> {
+                List<A2uiMessage> messages = buffer.drainPending();
+                if (messages.isEmpty()) {
+                    return Flux.empty();
+                }
+                // Emit each message with a small delay for streaming effect
+                return Flux.fromIterable(messages)
+                    .delayElements(Duration.ofMillis(30));
+            })
             .switchIfEmpty(Mono.just((A2uiMessage) ComponentMessage.append("main",
                 generateId("assistant"),
                 ComponentSpec.of("Text", Map.of(
                     "content", "No response generated",
                     "markdown", true
                 ))
-            )))
-            .delayElements(Duration.ofMillis(50)); // Small delay for streaming effect
+            )));
+    }
+
+    /**
+     * Output buffer that accumulates LLM tokens until complete JSON objects are found.
+     * Solves the token fragmentation problem where each character was sent as a separate component.
+     */
+    private static class A2uiOutputBuffer {
+        private final StringBuilder accumulated = new StringBuilder();
+        private final List<A2uiMessage> pendingMessages = new ArrayList<>();
+
+        /**
+         * Append a chunk of text and extract any complete JSON objects.
+         */
+        public A2uiOutputBuffer append(String chunk) {
+            accumulated.append(chunk);
+            extractCompleteMessages();
+            return this;
+        }
+
+        /**
+         * Extract complete JSON objects from accumulated text using bracket matching.
+         * Complete JSON objects are parsed and added to pendingMessages.
+         * Remaining text is kept in the buffer for further accumulation.
+         */
+        private void extractCompleteMessages() {
+            String text = accumulated.toString();
+            int n = text.length();
+
+            for (int i = 0; i < n; i++) {
+                char c = text.charAt(i);
+
+                // Skip non-JSON content at the beginning
+                if (c == '{' && i == findJsonStart(text, i)) {
+                    // Found start of a potential JSON object
+                    Integer endIndex = findMatchingBrace(text, i);
+                    if (endIndex != null) {
+                        String json = text.substring(i, endIndex + 1);
+                        try {
+                            // Only parse if it looks like an A2UI message (has "type" field)
+                            if (json.contains("\"type\"")) {
+                                A2uiMessage message = parseA2uiMessageStatic(json);
+                                if (message != null) {
+                                    pendingMessages.add(message);
+                                }
+                            }
+                        } catch (Exception e) {
+                            // JSON parsing failed, might be incomplete, continue accumulating
+                            log.debug("Buffer: incomplete JSON, continuing accumulation");
+                        }
+                        // Remove processed portion including any trailing content
+                        accumulated.delete(0, endIndex + 1);
+                        i = -1; // Reset to start
+                        n = accumulated.length();
+                    } else {
+                        // No matching brace found yet, wait for more content
+                        break;
+                    }
+                }
+            }
+        }
+
+        /**
+         * Find the start of a JSON object, skipping whitespace and newlines.
+         */
+        private int findJsonStart(String text, int from) {
+            while (from < text.length()) {
+                char c = text.charAt(from);
+                if (c == '{') return from;
+                if (!Character.isWhitespace(c)) break;
+                from++;
+            }
+            return from;
+        }
+
+        /**
+         * Find the matching closing brace for the opening brace at startIndex.
+         * Returns the index of the matching brace, or null if not found.
+         */
+        private Integer findMatchingBrace(String text, int startIndex) {
+            int depth = 0;
+            boolean inString = false;
+            char prevChar = 0;
+
+            for (int i = startIndex; i < text.length(); i++) {
+                char c = text.charAt(i);
+
+                if (c == '"' && prevChar != '\\') {
+                    inString = !inString;
+                } else if (!inString) {
+                    if (c == '{') {
+                        depth++;
+                    } else if (c == '}') {
+                        depth--;
+                        if (depth == 0) {
+                            return i;
+                        }
+                    }
+                }
+
+                prevChar = c;
+            }
+            return null; // Not complete yet
+        }
+
+        /**
+         * Drain all pending messages and return them.
+         */
+        public List<A2uiMessage> drainPending() {
+            List<A2uiMessage> result = new ArrayList<>(pendingMessages);
+            pendingMessages.clear();
+            return result;
+        }
+
+        /**
+         * Get any remaining text that hasn't been parsed into a complete JSON object.
+         */
+        public String getRemainingText() {
+            return accumulated.toString();
+        }
+
+        /**
+         * Parse a JSON string to an A2uiMessage (static version for use in buffer).
+         */
+        private static A2uiMessage parseA2uiMessageStatic(String json) {
+            try {
+                ObjectMapper mapper = A2uiEncoder.getMapper();
+                @SuppressWarnings("unchecked")
+                Map<String, Object> map = mapper.readValue(json, Map.class);
+                String type = (String) map.get("type");
+
+                if (type == null) {
+                    return null;
+                }
+
+                switch (type) {
+                    case "surface":
+                        return mapper.readValue(json, SurfaceMessage.class);
+                    case "component":
+                        return mapper.readValue(json, ComponentMessage.class);
+                    case "dataModel":
+                        return mapper.readValue(json, com.a2ui.backend.protocol.model.DataModelMessage.class);
+                    case "deleteSurface":
+                        return mapper.readValue(json, com.a2ui.backend.protocol.model.DeleteSurfaceMessage.class);
+                    default:
+                        return null;
+                }
+            } catch (Exception e) {
+                log.debug("Failed to parse JSON: {}", e.getMessage());
+                return null;
+            }
+        }
     }
 
     /**
      * Extract A2UI messages from assistant output text.
+     * This method is kept for backward compatibility but is superseded by A2uiOutputBuffer.
      */
     private List<A2uiMessage> extractA2uiMessages(String text) {
         List<A2uiMessage> messages = new ArrayList<>();
