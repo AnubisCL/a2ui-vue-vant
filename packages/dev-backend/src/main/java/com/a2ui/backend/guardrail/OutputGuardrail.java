@@ -25,39 +25,51 @@ public class OutputGuardrail {
 
     /**
      * Validate A2UI JSON output
-     * @param json A2UI JSON string
-     * @return ValidationResult
      */
     public ValidationResult validate(String json) {
-        if (json == null || json.isEmpty()) {
+        if (json == null || json.isBlank()) {
             return ValidationResult.failure("输出不能为空");
         }
 
         try {
             JsonNode node = objectMapper.readTree(json);
-
-            // Check required fields
-            if (!node.has("type")) {
-                return ValidationResult.failure("JSON 缺少 type 字段");
-            }
-
-            if (!node.has("surfaceId")) {
-                return ValidationResult.failure("JSON 缺少 surfaceId 字段");
-            }
-
-            // Check component type whitelist
-            if (node.has("component") && node.get("component").has("type")) {
-                String componentType = node.get("component").get("type").asText();
-                if (!ALLOWED_COMPONENT_TYPES.contains(componentType)) {
-                    log.warn("不允许的组件类型: {}", componentType);
-                    return ValidationResult.failure("不支持的组件类型: " + componentType);
-                }
-            }
-
-            return ValidationResult.success();
+            return validateNode(node);
         } catch (Exception e) {
             log.warn("JSON 解析失败: {}", e.getMessage());
-            return ValidationResult.failure("JSON 格式错误: " + e.getMessage());
+            return ValidationResult.failure("JSON 格式错误");
         }
+    }
+
+    private ValidationResult validateNode(JsonNode node) {
+        // Check required fields
+        if (!node.has("type")) {
+            return ValidationResult.failure("JSON 缺少 type 字段");
+        }
+
+        if (!node.has("surfaceId")) {
+            return ValidationResult.failure("JSON 缺少 surfaceId 字段");
+        }
+
+        // Check component type whitelist (including nested)
+        if (node.has("component") && node.get("component").has("type")) {
+            String componentType = node.get("component").get("type").asText();
+            if (!ALLOWED_COMPONENT_TYPES.contains(componentType)) {
+                log.warn("不允许的组件类型: {}", componentType);
+                return ValidationResult.failure("不支持的组件类型: " + componentType);
+            }
+
+            // Recursively validate nested components
+            JsonNode component = node.get("component");
+            if (component.has("children")) {
+                for (JsonNode child : component.get("children")) {
+                    ValidationResult result = validateNode(child);
+                    if (!result.isSuccess()) {
+                        return result;
+                    }
+                }
+            }
+        }
+
+        return ValidationResult.success();
     }
 }
