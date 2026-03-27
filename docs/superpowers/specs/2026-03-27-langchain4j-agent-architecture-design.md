@@ -1,8 +1,8 @@
 # LangChain4j Agent 架构设计
 
-> 文档版本: 1.2
+> 文档版本: 1.3
 > 创建日期: 2026-03-27
-> 状态: 已更新 (明确 A2UIAgent 独立 LLM Agent + Structured Output)
+> 状态: 已更新 (集成 langchain4j-agentic-a2a + langchain4j-skills)
 
 ---
 
@@ -23,18 +23,19 @@
 基于 Spring 主导架构，重构 dev-backend 的 LangChain4j 集成，实现：
 
 - **Structured Outputs** - 使用 LangChain4j 原生特性规范 LLM 输出
-- **Skills** - 技能分层，Tool 按职责分组
+- **Skills** - 技能分层，使用 `langchain4j-skills` 模块
 - **Classification** - 意图识别，区分 UI/Markdown/文本输出
 - **Guardrails** - 前后拦截，输入输出校验
-- **A2A** - Agent 间通信，GeneralAgent 调用 A2UIAgent
+- **A2A** - Agent 间通信，使用 `langchain4j-agentic-a2a` 模块
 
 ### 1.2 关键设计决策
 
 | 决策 | 选择 | 理由 |
 |------|------|------|
-| Structured Output | LangChain4j 原生特性 | 使用 `@UserMessage` + DTO 返回类型，让框架处理 JSON 解析 |
 | A2UIAgent | 独立 LLM Agent | 有自己的 LLM 推理、System Prompt 和记忆 |
-| Agent 通信 | 工具调用 (Tool Call) | GeneralAgent 通过 `requestA2UI()` 工具触发 A2UIAgent |
+| A2A 通信 | **langchain4j-agentic-a2a 原生模块** | 使用 `AgenticServices.a2aBuilder()` 创建 A2A Agent |
+| Skills 系统 | **langchain4j-skills 模块** | YAML 定义 + ClassPath/FileSystem 加载 |
+| Structured Output | LangChain4j 原生特性 | 使用 `@UserMessage` + DTO 返回类型 |
 | 架构风格 | Spring 主导 | LangChain4j 负责 LLM 调用，Spring 负责 Agent 协调 |
 
 ### 1.3 架构方案
@@ -88,28 +89,74 @@
 
 ### 2.1 A2A 通信说明
 
-**A2UIAgent 是独立的 LLM Agent**，通过 Tool Call 实现真正的 Agent-to-Agent 通信：
+**A2UIAgent 是独立的 LLM Agent**，通过 `langchain4j-agentic-a2a` 原生模块实现 Agent-to-Agent 通信。
+
+**核心组件：**
+
+```java
+// 1. A2UIAgent 使用 @Agent 注解定义
+@Agent
+public interface A2UIAgent {
+    // Agent 能力定义
+}
+
+// 2. GeneralAgent 通过 AgenticServices.a2aBuilder() 调用
+@Service
+public class GeneralAgentTools {
+
+    private final A2UIAgent a2uiAgent;
+
+    // 使用 a2aBuilder 创建 A2A 客户端
+    public GeneralAgentTools() {
+        this.a2uiAgent = AgenticServices.a2aBuilder(A2A_SERVER_URL)
+            .build(A2UIAgent.class);
+    }
+
+    // 通过 Tool 调用 A2UIAgent
+    @Tool("请求 A2UI 组件")
+    public A2UIComponent requestA2UI(
+        @P("显示类型") String displayType,
+        @P("数据") String data
+    ) {
+        // A2A 调用
+        return a2uiAgent.generate(request);
+    }
+}
+```
+
+**A2A 通信流程：**
 
 ```
-GeneralAgent                    A2UIAgent
-     │                               │
-     │  1. LLM 推理                   │
-     │  ─────────────────────►       │
-     │                               │
-     │  2. 调用 requestA2UI() Tool     │
-     │  ─────────────────────►       │ 3. 独立 LLM 推理
-     │                               │  ────────────────►
-     │                               │
-     │  4. 返回 A2UI JSON 结果        │
-     │  ◄──────────────────────      │
-     │                               │
-     ▼                               ▼
+┌──────────────────────────────────────────────────────────────┐
+│                     A2A Communication Flow                   │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  GeneralAgent                  A2UIAgent                      │
+│       │                             │                        │
+│       │  1. User Request             │                        │
+│       │  ──────────────────────────►│                        │
+│       │                             │                        │
+│       │  2. LLM 推理                 │                        │
+│       │  ──────────────────────────►│                        │
+│       │                             │                        │
+│       │  3. 调用 requestA2UI Tool    │                        │
+│       │  ──────────────────────────►│ 4. A2A 协议消息        │
+│       │                             │───────────────────────►│
+│       │                             │                        │
+│       │                             │ 5. A2UIAgent 独立推理  │
+│       │                             │  ─────────────────────►│
+│       │                             │                        │
+│       │  6. A2A Response            │                        │
+│       │  ◄──────────────────────────│◄───────────────────────│
+│       │                             │                        │
+│       ▼                             ▼                        │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-**通信协议：**
-- GeneralAgent 通过 `@Tool("请求 A2UI 组件")` 调用 A2UIAgent
-- 传递 `A2UIRequest` JSON 作为参数
-- A2UIAgent 返回结构化的 A2UI JSON
+**关键特性：**
+- 使用 `AgenticServices.a2aBuilder()` 创建 A2A 客户端
+- 支持 Skill-scoped tools（Agent 可用的工具按 Skill 分组）
+- 消息通过 A2A 协议传输，支持流式响应
 
 ---
 
@@ -205,7 +252,67 @@ public class A2UIRequest {
 
 ## 4. Skill 系统设计
 
-### 4.1 GeneralAgent Tools
+### 4.1 LangChain4j Skills 概述
+
+LangChain4j Skills 是一个为 LLM 提供可复用、自包含行为指令的机制。
+
+**核心特性：**
+- **FileSystemSkillLoader** - 从文件系统加载 Skill 定义
+- **ClassPathSkillLoader** - 从 classpath 加载 Skill 定义
+- **Programmatic Skill** - 以编程方式定义 Skill
+- **Skill-scoped tools** - Skill 特定的工具集
+
+### 4.2 Skill 定义示例
+
+```yaml
+# resources/skills/text-skill.yaml
+name: Text Generation
+description: 生成文本组件的规则
+instructions: |
+  当需要生成文本内容时：
+  1. 使用 Text 组件类型
+  2. 支持 Markdown 格式
+  3. 重要信息使用 Card 包裹
+  4. 保持内容简洁
+```
+
+```yaml
+# resources/skills/chart-skill.yaml
+name: Chart Generation
+description: 生成图表组件的规则
+instructions: |
+  当需要生成图表时：
+  1. 根据数据选择合适的图表类型
+     - 趋势数据: line
+     - 对比数据: bar
+     - 占比数据: pie
+  2. 包含标题、图例、坐标轴
+  3. 提供交互提示
+  4. 图表高度默认 300px
+```
+
+### 4.3 Skills 配置
+
+```java
+// 加载 Skills
+Skills skills = Skills.builder()
+    .loadFrom(
+        FileSystemSkillLoader.from("src/main/resources/skills")
+        // 或 ClassPathSkillLoader.from("skills")
+    )
+    .build();
+
+// 创建带 Skills 的 Agent
+A2UIAgent a2uiAgent = AiServices.builder(A2UIAgent.class)
+    .streamingChatModel(streamingModel)
+    .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(50))
+    .skills(skills)  // 注册 Skills
+    .build();
+
+// Agent 可使用 activate_skill Tool 动态切换 Skill
+```
+
+### 4.4 GeneralAgent Tools
 
 GeneralAgent 使用 Tools 实现数据查询和 A2A 通信：
 
@@ -273,42 +380,70 @@ public class GeneralAgentTools {
 }
 ```
 
-### 4.2 A2UIAgent Skills（LLM 生成规则）
+### 4.5 A2UIAgent Skills（LLM 生成规则）
 
-**重要说明：** A2UIAgent 是独立的 LLM Agent，其 "Skills" 实际上是通过 **System Prompt** 指导 LLM 生成特定的 A2UI 组件。
+A2UIAgent 使用 **langchain4j-skills** 模块定义组件生成规则：
 
-A2UIAgent 的 Skills 不是 Tool，而是 **LLM 生成规则**：
+**Skill 文件结构：**
 
 ```
-┌─────────────────────────────────────────────────┐
-│              A2UIAgent System Prompt            │
-├─────────────────────────────────────────────────┤
-│                                                 │
-│  ## TextSkill (文本生成规则)                     │
-│  - 生成 Text 组件时，包含 markdown 支持          │
-│  - 使用卡片包裹重要信息                          │
-│                                                 │
-│  ## ChartSkill (图表生成规则)                   │
-│  - 根据数据选择合适的图表类型                    │
-│  - 包含标题、图例、坐标轴                       │
-│  - 提供交互提示                                  │
-│                                                 │
-│  ## FormSkill (表单生成规则)                    │
-│  - 清晰的字段标签                               │
-│  - 必填项标记                                    │
-│  - 合理的布局                                    │
-│                                                 │
-│  ## CardSkill (卡片规则)                        │
-│  - 标题简洁不超过一行                           │
-│  - 内容结构化                                    │
-│  - 适当的操作按钮                               │
-│                                                 │
-│  ## LayoutSkill (布局规则)                      │
-│  - 相关组件放在一起                             │
-│  - 表单优先于图表                               │
-│  - 使用 Card 容器包裹                            │
-│                                                 │
-└─────────────────────────────────────────────────┘
+src/main/resources/skills/
+├── text-skill.yaml       # 文本组件生成规则
+├── chart-skill.yaml      # 图表组件生成规则
+├── form-skill.yaml       # 表单组件生成规则
+├── card-skill.yaml       # 卡片组件生成规则
+└── layout-skill.yaml     # 布局规则
+```
+
+**Skill 加载与注册：**
+
+```java
+@Configuration
+public class SkillsConfig {
+
+    @Bean
+    public Skills a2uiSkills() {
+        return Skills.builder()
+            .loadFrom(
+                ClassPathSkillLoader.from("skills")
+            )
+            // Skill 特定的工具
+            .addTool(ChartGeneratorTool.class)
+            .addTool(DataQueryTool.class)
+            .build();
+    }
+}
+```
+
+**Agent 使用 Skill：**
+
+```java
+@Bean
+public A2UIAgent a2uiAgent(
+    StreamingChatModel streamingModel,
+    Skills a2uiSkills
+) {
+    return AiServices.builder(A2UIAgent.class)
+        .streamingChatModel(streamingModel)
+        .chatMemoryProvider(memoryId ->
+            MessageWindowChatMemory.withMaxMessages(50))
+        .skills(a2uiSkills)
+        .build();
+}
+```
+
+**动态 Skill 切换：**
+
+LLM 可以使用内置的 `activate_skill` Tool 动态切换 Skill：
+
+```
+User: 生成一个销售图表
+-> Agent 调用 activate_skill("chart-skill")
+-> Agent 生成 Chart 组件
+
+User: 生成一个注册表单
+-> Agent 调用 activate_skill("form-skill")
+-> Agent 生成 Form 组件
 ```
 
 ### 4.3 A2UIAgent Structured Output
@@ -974,11 +1109,38 @@ curl -N "http://localhost:8080/api/chat/stream?message=帮我查询数据"
 ## 11. 依赖变更
 
 ```xml
-<!-- LangChain4j - 保持 1.12.2 -->
+<!-- LangChain4j 核心 -->
 <dependency>
     <groupId>dev.langchain4j</groupId>
     <artifactId>langchain4j</artifactId>
     <version>1.12.2</version>
+</dependency>
+
+<!-- LangChain4j OpenAI 支持（用于 GLM 兼容 API） -->
+<dependency>
+    <groupId>dev.langchain4j</groupId>
+    <artifactId>langchain4j-open-ai</artifactId>
+    <version>1.12.2</version>
+</dependency>
+
+<!-- LangChain4j Agentic A2A 模块 - Agent 间通信 -->
+<dependency>
+    <groupId>dev.langchain4j</groupId>
+    <artifactId>langchain4j-agentic-a2a</artifactId>
+    <version>1.12.2</version>
+</dependency>
+
+<!-- LangChain4j Skills 模块 - LLM 生成规则 -->
+<dependency>
+    <groupId>dev.langchain4j</groupId>
+    <artifactId>langchain4j-skills</artifactId>
+    <version>1.12.2</version>
+</dependency>
+
+<!-- Spring Boot WebFlux（支持响应式流） -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-webflux</artifactId>
 </dependency>
 
 <!-- 现有依赖保持不变 -->
