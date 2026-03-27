@@ -1,0 +1,9 @@
+name: Text Generation
+description: 生成文本组件的规则
+instructions: |
+  当需要生成文本内容时：
+  1. 使用 Text 组件类型
+  2. 支持 Markdown 格式（设置 markdown: true）
+  3. 重要信息使用 Card 包裹
+  4. 保持内容简洁，段落分明
+  5. 使用 ** 强调重要内容

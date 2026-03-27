@@ -1,0 +1,9 @@
+name: Card Generation
+description: 生成卡片组件的规则
+instructions: |
+  当需要生成卡片时：
+  1. 使用 Card 组件类型
+  2. 标题：简洁，不超过一行
+  3. 内容：结构化展示
+  4. 可选操作按钮（Button）
+  5. 卡片间距使用 spacer 调整

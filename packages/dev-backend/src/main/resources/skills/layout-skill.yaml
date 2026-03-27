@@ -1,0 +1,13 @@
+name: Layout Rules
+description: 组件布局和组合规则
+instructions: |
+  组件布局规则：
+  1. 相关组件放在一起
+  2. 布局顺序：
+     - 先 Surface（定义容器）
+     - 再表单/筛选器
+     - 后图表/列表
+  3. 使用 Card 包裹重要内容
+  4. 使用 Divider 分隔不同内容块
+  5. 使用 Spacer 控制间距
+  6. 组件 ID 必须唯一

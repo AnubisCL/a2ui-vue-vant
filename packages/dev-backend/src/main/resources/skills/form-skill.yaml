@@ -1,0 +1,13 @@
+name: Form Generation
+description: 生成表单组件的规则
+instructions: |
+  当需要生成表单时：
+  1. 使用 Form 组件类型
+  2. 字段配置：
+     - name: 字段名（英文，用于提交）
+     - label: 显示标签（中文）
+     - type: text | select | textarea | date | number
+     - required: true | false
+  3. select 类型必须包含 options 数组
+  4. 必须包含 submitLabel（如"提交"、"查询"）
+  5. 使用 action 指定表单提交标识

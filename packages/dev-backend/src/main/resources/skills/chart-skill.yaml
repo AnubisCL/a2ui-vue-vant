@@ -1,0 +1,16 @@
+name: Chart Generation
+description: 生成图表组件的规则
+instructions: |
+  当需要生成图表时：
+  1. 根据数据选择合适的图表类型：
+     - 趋势数据（时间序列）: line
+     - 对比数据（类别比较）: bar
+     - 占比数据（比例分布）: pie
+     - 关系数据（相关性）: scatter
+  2. 必须包含：
+     - title: 图表标题
+     - xAxis/yAxis: 坐标轴配置
+     - legend: 图例
+     - tooltip: 提示框
+  3. 图表高度默认 300px
+  4. 使用 smooth: true 让折线图更平滑
