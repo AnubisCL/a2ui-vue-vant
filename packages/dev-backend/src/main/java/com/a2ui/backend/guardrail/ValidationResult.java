@@ -1,19 +1,30 @@
 package com.a2ui.backend.guardrail;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 
-@Data
-@Builder
-public class ValidationResult {
-    private boolean success;
-    private String message;
+@Getter
+public final class ValidationResult {
+    private final boolean success;
+    private final String message;
+
+    private ValidationResult(boolean success, String message) {
+        this.success = success;
+        this.message = message;
+    }
 
     public static ValidationResult success() {
-        return ValidationResult.builder().success(true).build();
+        return new ValidationResult(true, null);
     }
 
     public static ValidationResult failure(String message) {
-        return ValidationResult.builder().success(false).message(message).build();
+        return new ValidationResult(false, message);
+    }
+
+    @Override
+    public String toString() {
+        return "ValidationResult{" +
+            "success=" + success +
+            ", message='" + message + '\'' +
+            '}';
     }
 }
