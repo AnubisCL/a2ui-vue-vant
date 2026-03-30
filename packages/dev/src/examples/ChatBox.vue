@@ -127,7 +127,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { A2uiRenderer, useA2UI } from '@a2ui/vue-plugin'
 
 // Types
@@ -215,7 +215,7 @@ const updateAssistantMessage = (surfaceId: string) => {
   }
 }
 
-// Send message
+// Send message from input
 const sendMessage = async () => {
   const text = inputText.value.trim()
   if (!text || isLoading.value) return
@@ -225,27 +225,7 @@ const sendMessage = async () => {
     inputRef.value.style.height = 'auto'
   }
 
-  addUserMessage(text)
-  isLoading.value = true
-
-  const surfaceId = addAssistantMessage()
-
-  try {
-    await sendToBackend(text, surfaceId)
-    isConnected.value = true
-  } catch (error) {
-    console.error('Send error:', error)
-    const msg = messages.value.find(m => m.surfaceId === surfaceId)
-    if (msg) {
-      msg.loading = false
-      msg.text = `**错误:** ${(error as Error).message}`
-    }
-    isConnected.value = false
-  } finally {
-    isLoading.value = false
-    updateAssistantMessage(surfaceId)
-    scrollToBottom()
-  }
+  await sendUserMessage(text)
 }
 
 // Send quick prompt
@@ -323,9 +303,46 @@ const sendToBackend = async (message: string, surfaceId: string) => {
   }
 }
 
-// Handle component events
+// Handle component events (form submissions, etc.)
 const handleComponentEvent = (surfaceId: string, componentId: string, eventType: string, payload: unknown) => {
   console.log('Component event:', { surfaceId, componentId, eventType, payload })
+}
+
+// Handle form submission via window custom event
+const handleFormSubmit = async (event: Event) => {
+  const customEvent = event as CustomEvent<{ action: string; data: Record<string, unknown> }>
+  const { action, data } = customEvent.detail
+  console.log('Form submitted:', { action, data })
+
+  const formMessage = `[表单提交] ${action}: ${JSON.stringify(data)}`
+  await sendUserMessage(formMessage)
+}
+
+// Send a user message to the backend (reusable for both text input and form submission)
+const sendUserMessage = async (text: string) => {
+  if (isLoading.value) return
+
+  addUserMessage(text)
+  isLoading.value = true
+
+  const surfaceId = addAssistantMessage()
+
+  try {
+    await sendToBackend(text, surfaceId)
+    isConnected.value = true
+  } catch (error) {
+    console.error('Send error:', error)
+    const msg = messages.value.find(m => m.surfaceId === surfaceId)
+    if (msg) {
+      msg.loading = false
+      msg.text = `**错误:** ${(error as Error).message}`
+    }
+    isConnected.value = false
+  } finally {
+    isLoading.value = false
+    updateAssistantMessage(surfaceId)
+    scrollToBottom()
+  }
 }
 
 // Simple markdown renderer
@@ -340,6 +357,11 @@ const renderMarkdown = (text: string): string => {
 // Focus input on mount
 onMounted(() => {
   inputRef.value?.focus()
+  window.addEventListener('a2ui-form-submit', handleFormSubmit)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('a2ui-form-submit', handleFormSubmit)
 })
 </script>
 
