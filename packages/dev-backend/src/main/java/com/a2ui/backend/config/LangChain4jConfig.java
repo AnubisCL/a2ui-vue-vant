@@ -6,6 +6,7 @@ import com.a2ui.backend.agent.general.GeneralAgentTools;
 import com.a2ui.backend.llm.A2uiAssistant;
 import com.a2ui.backend.tools.ChartGeneratorTool;
 import com.a2ui.backend.tools.DataQueryTool;
+import com.a2ui.backend.tools.FormGeneratorTool;
 import dev.langchain4j.http.client.jdk.JdkHttpClientBuilder;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.StreamingChatModel;
@@ -37,13 +38,16 @@ public class LangChain4jConfig {
     private final A2uiProperties a2uiProperties;
     private final DataQueryTool dataQueryTool;
     private final ChartGeneratorTool chartGeneratorTool;
+    private final FormGeneratorTool formGeneratorTool;
 
     public LangChain4jConfig(A2uiProperties a2uiProperties,
                              DataQueryTool dataQueryTool,
-                             ChartGeneratorTool chartGeneratorTool) {
+                             ChartGeneratorTool chartGeneratorTool,
+                             FormGeneratorTool formGeneratorTool) {
         this.a2uiProperties = a2uiProperties;
         this.dataQueryTool = dataQueryTool;
         this.chartGeneratorTool = chartGeneratorTool;
+        this.formGeneratorTool = formGeneratorTool;
     }
 
     /**
@@ -80,12 +84,12 @@ public class LangChain4jConfig {
             .logResponses(true)
             .build();
 
-        log.info("Creating A2uiAssistant with streaming model and tools: DataQueryTool, ChartGeneratorTool");
+        log.info("Creating A2uiAssistant with streaming model and tools: DataQueryTool, ChartGeneratorTool, FormGeneratorTool");
 
         return AiServices.builder(A2uiAssistant.class)
             .streamingChatModel(streamingModel)
             .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(100))
-            .tools(dataQueryTool, chartGeneratorTool)
+            .tools(dataQueryTool, chartGeneratorTool, formGeneratorTool)
             .build();
     }
 
@@ -124,7 +128,7 @@ public class LangChain4jConfig {
      */
     @Bean
     public GeneralAgentTools generalAgentTools() {
-        return new GeneralAgentTools(dataQueryTool, chartGeneratorTool);
+        return new GeneralAgentTools(dataQueryTool, chartGeneratorTool, formGeneratorTool);
     }
 
     /**
@@ -148,12 +152,12 @@ public class LangChain4jConfig {
     public GeneralAgent generalAgent() {
         StreamingChatModel model = createStreamingChatModel();
 
-        log.info("Creating GeneralAgent with tools: DataQueryTool, ChartGeneratorTool");
+        log.info("Creating GeneralAgent with tools: DataQueryTool, ChartGeneratorTool, FormGeneratorTool");
 
         return AiServices.builder(GeneralAgent.class)
             .streamingChatModel(model)
             .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(100))
-            .tools(dataQueryTool, chartGeneratorTool)
+            .tools(dataQueryTool, chartGeneratorTool, formGeneratorTool)
             .build();
     }
 

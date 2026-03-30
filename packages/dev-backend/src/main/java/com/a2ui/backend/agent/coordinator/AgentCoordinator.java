@@ -9,8 +9,7 @@ import com.a2ui.backend.protocol.model.A2uiMessage;
 import com.a2ui.backend.protocol.model.ComponentMessage;
 import com.a2ui.backend.protocol.model.ComponentSpec;
 import com.a2ui.backend.protocol.model.SurfaceMessage;
-import com.a2ui.backend.tools.ChartResultCache;
-import com.a2ui.backend.protocol.model.ComponentMessage;
+import com.a2ui.backend.tools.ComponentResultCache;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +33,7 @@ public class AgentCoordinator {
     private final GeneralAgent generalAgent;
     private final InputGuardrail inputGuardrail;
     private final OutputGuardrail outputGuardrail;
-    private final ChartResultCache chartResultCache;
+    private final ComponentResultCache componentResultCache;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -75,11 +74,11 @@ public class AgentCoordinator {
                 // Get all complete messages
                 List<A2uiMessage> messages = buffer.drainMessages();
 
-                // Check for cached chart results from tool execution
-                List<ComponentMessage> chartMessages = chartResultCache.drainChartMessages(memoryId);
-                if (!chartMessages.isEmpty()) {
-                    log.info("Adding {} cached chart messages", chartMessages.size());
-                    messages.addAll(chartMessages);
+                // Check for cached component results from tool execution
+                List<ComponentMessage> cachedComponents = componentResultCache.drainComponents(memoryId);
+                if (!cachedComponents.isEmpty()) {
+                    log.info("Adding {} cached component messages", cachedComponents.size());
+                    messages.addAll(cachedComponents);
                 }
 
                 // Handle any remaining text as a Text component

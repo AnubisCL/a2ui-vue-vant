@@ -11,49 +11,45 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * Global cache for chart tool results that should be rendered directly.
+ * Global cache for tool-generated component results that should be rendered directly.
  *
- * When chart tools are called, they store their A2UI component results here.
+ * When tools (Chart, Form, etc.) are called, they store their A2UI component results here.
  * The AgentCoordinator then retrieves these cached results and includes them
  * in the final output, bypassing LLM text generation.
  *
- * Uses sessionId as the key (derived from sessionId.hashCode()) to work across
+ * Uses memoryId (derived from sessionId.hashCode()) as the key to work across
  * different threads in reactive streams.
  */
 @Slf4j
 @Component
-public class ChartResultCache {
+public class ComponentResultCache {
 
-    // Map of memory ID (sessionId hash) -> queue of chart messages
     private final Map<Long, ConcurrentLinkedQueue<ComponentMessage>> cache = new ConcurrentHashMap<>();
 
-    /**
-     * Get or create cache queue for a session
-     */
     private ConcurrentLinkedQueue<ComponentMessage> getOrCreateQueue(Long memoryId) {
         return cache.computeIfAbsent(memoryId, k -> new ConcurrentLinkedQueue<>());
     }
 
     /**
-     * Add a chart message to the cache for a specific session
+     * Add a component message to the cache for a specific session
      */
-    public void addChartMessage(Long memoryId, ComponentMessage message) {
+    public void addComponent(Long memoryId, ComponentMessage message) {
         if (memoryId == null) {
-            log.warn("No memory ID provided, cannot cache chart message");
+            log.warn("No memory ID provided, cannot cache component message");
             return;
         }
         ConcurrentLinkedQueue<ComponentMessage> queue = getOrCreateQueue(memoryId);
         queue.offer(message);
-        log.info("Chart message cached: componentId={}, memoryId={}", message.getComponentId(), memoryId);
+        log.info("Component cached: componentId={}, memoryId={}", message.getComponentId(), memoryId);
     }
 
     /**
-     * Get all cached chart messages and clear the cache for a specific session
+     * Get all cached component messages and clear the cache for a specific session
      */
-    public List<ComponentMessage> drainChartMessages(Long memoryId) {
+    public List<ComponentMessage> drainComponents(Long memoryId) {
         List<ComponentMessage> result = new ArrayList<>();
         if (memoryId == null) {
-            log.warn("No memory ID provided, cannot drain chart messages");
+            log.warn("No memory ID provided, cannot drain component messages");
             return result;
         }
         ConcurrentLinkedQueue<ComponentMessage> queue = cache.remove(memoryId);
@@ -63,14 +59,14 @@ public class ChartResultCache {
                 result.add(msg);
             }
         }
-        log.info("Drained {} chart messages from cache for memoryId: {}", result.size(), memoryId);
+        log.info("Drained {} component messages from cache for memoryId: {}", result.size(), memoryId);
         return result;
     }
 
     /**
-     * Check if there are cached chart messages for a specific session
+     * Check if there are cached component messages for a specific session
      */
-    public boolean hasChartMessages(Long memoryId) {
+    public boolean hasComponents(Long memoryId) {
         if (memoryId == null) return false;
         ConcurrentLinkedQueue<ComponentMessage> queue = cache.get(memoryId);
         return queue != null && !queue.isEmpty();
@@ -90,6 +86,6 @@ public class ChartResultCache {
      */
     public void clearAll() {
         cache.clear();
-        log.info("All chart caches cleared");
+        log.info("All component caches cleared");
     }
 }

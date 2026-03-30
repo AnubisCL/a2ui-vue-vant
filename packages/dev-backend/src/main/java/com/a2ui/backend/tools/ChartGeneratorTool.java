@@ -23,10 +23,10 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ChartGeneratorTool {
 
-    private final ChartResultCache chartResultCache;
+    private final ComponentResultCache componentResultCache;
 
-    public ChartGeneratorTool(ChartResultCache chartResultCache) {
-        this.chartResultCache = chartResultCache;
+    public ChartGeneratorTool(ComponentResultCache componentResultCache) {
+        this.componentResultCache = componentResultCache;
     }
 
     // Default color palette
@@ -115,7 +115,7 @@ public class ChartGeneratorTool {
             );
 
         // Cache the message for direct output using memoryId
-        chartResultCache.addChartMessage(memoryId, chartMessage);
+        componentResultCache.addComponent(memoryId, chartMessage);
         log.info("Chart component cached: componentId={}, memoryId={}", componentId, memoryId);
 
         // Return JSON string for LLM (it will see this as context)
@@ -302,7 +302,8 @@ public class ChartGeneratorTool {
     public String generateComparisonChart(
         @P("Chart title") String title,
         @P("X-axis labels as JSON array, e.g. [\"Jan\",\"Feb\",\"Mar\"]") String labelsJson,
-        @P("Series data as JSON array, e.g. [{\"name\":\"Sales\",\"values\":[100,200,150]}]") String seriesJson
+        @P("Series data as JSON array, e.g. [{\"name\":\"Sales\",\"values\":[100,200,150]}]") String seriesJson,
+        @ToolMemoryId Long memoryId
     ) {
         log.info("Generating comparison chart: title={}", title);
 
@@ -352,7 +353,7 @@ public class ChartGeneratorTool {
             )
         ));
 
-        return formatAsJson(option);
+        return formatAsA2uiChartComponent(option, memoryId);
     }
 
     private Map<String, Object> createLineChartConfig(String dataJson) {

@@ -2,6 +2,7 @@ package com.a2ui.backend.agent.general;
 
 import com.a2ui.backend.tools.ChartGeneratorTool;
 import com.a2ui.backend.tools.DataQueryTool;
+import com.a2ui.backend.tools.FormGeneratorTool;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -13,6 +14,7 @@ public class GeneralAgentTools {
 
     private final DataQueryTool dataQueryTool;
     private final ChartGeneratorTool chartGeneratorTool;
+    private final FormGeneratorTool formGeneratorTool;
 
     public DataQueryTool getDataQueryTool() {
         return dataQueryTool;
@@ -20,5 +22,9 @@ public class GeneralAgentTools {
 
     public ChartGeneratorTool getChartGeneratorTool() {
         return chartGeneratorTool;
+    }
+
+    public FormGeneratorTool getFormGeneratorTool() {
+        return formGeneratorTool;
     }
 }
