@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agent.tool.ToolMemoryId;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -46,9 +47,10 @@ public class ChartGeneratorTool {
     public String generateChart(
         @P("Chart type: line, bar, pie, area, scatter") String chartType,
         @P("Chart title") String title,
-        @P("Data in JSON format with labels and values") String dataJson
+        @P("Data in JSON format with labels and values") String dataJson,
+        @ToolMemoryId Long memoryId
     ) {
-        log.info("Generating chart: type={}, title={}", chartType, title);
+        log.info("Generating chart: type={}, title={}, memoryId={}", chartType, title, memoryId);
 
         Map<String, Object> option = new HashMap<>();
 
@@ -95,13 +97,13 @@ public class ChartGeneratorTool {
         option.put("color", DEFAULT_COLORS);
 
         // Return as A2UI Chart component - LLM should output this directly
-        return formatAsA2uiChartComponent(option);
+        return formatAsA2uiChartComponent(option, memoryId);
     }
 
     /**
      * Format ECharts option as A2UI Chart component JSON and cache it
      */
-    private String formatAsA2uiChartComponent(Map<String, Object> option) {
+    private String formatAsA2uiChartComponent(Map<String, Object> option, Long memoryId) {
         String componentId = "chart_" + System.currentTimeMillis();
 
         // Create the A2UI component message
@@ -112,9 +114,9 @@ public class ChartGeneratorTool {
                 com.a2ui.backend.protocol.model.ComponentSpec.of("Chart", Map.of("option", option))
             );
 
-        // Cache the message for direct output
-        chartResultCache.addChartMessage(chartMessage);
-        log.info("Chart component cached: componentId={}", componentId);
+        // Cache the message for direct output using memoryId
+        chartResultCache.addChartMessage(memoryId, chartMessage);
+        log.info("Chart component cached: componentId={}, memoryId={}", componentId, memoryId);
 
         // Return JSON string for LLM (it will see this as context)
         Map<String, Object> component = Map.of(
@@ -144,9 +146,10 @@ public class ChartGeneratorTool {
         @P("Chart title") String title,
         @P("List of month labels") List<String> months,
         @P("Sales data values") List<Integer> sales,
-        @P("Order count values, optional") List<Integer> orders
+        @P("Order count values, optional") List<Integer> orders,
+        @ToolMemoryId Long memoryId
     ) {
-        log.info("Generating sales chart with {} data points", months.size());
+        log.info("Generating sales chart with {} data points, memoryId={}", months.size(), memoryId);
 
         Map<String, Object> option = new HashMap<>();
 
@@ -213,7 +216,7 @@ public class ChartGeneratorTool {
 
         option.put("series", series);
 
-        return formatAsA2uiChartComponent(option);
+        return formatAsA2uiChartComponent(option, memoryId);
     }
 
     /**
@@ -228,9 +231,10 @@ public class ChartGeneratorTool {
     public String generatePieChart(
         @P("Chart title") String title,
         @P("Category labels") List<String> categories,
-        @P("Category values") List<Integer> values
+        @P("Category values") List<Integer> values,
+        @ToolMemoryId Long memoryId
     ) {
-        log.info("Generating pie chart with {} categories", categories.size());
+        log.info("Generating pie chart with {} categories, memoryId={}", categories.size(), memoryId);
 
         Map<String, Object> option = new HashMap<>();
 
@@ -283,7 +287,7 @@ public class ChartGeneratorTool {
 
         option.put("color", DEFAULT_COLORS);
 
-        return formatAsA2uiChartComponent(option);
+        return formatAsA2uiChartComponent(option, memoryId);
     }
 
     /**

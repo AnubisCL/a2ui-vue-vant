@@ -76,7 +76,7 @@ public class AgentCoordinator {
                 List<A2uiMessage> messages = buffer.drainMessages();
 
                 // Check for cached chart results from tool execution
-                List<ComponentMessage> chartMessages = chartResultCache.drainChartMessages();
+                List<ComponentMessage> chartMessages = chartResultCache.drainChartMessages(memoryId);
                 if (!chartMessages.isEmpty()) {
                     log.info("Adding {} cached chart messages", chartMessages.size());
                     messages.addAll(chartMessages);
