@@ -125,8 +125,13 @@ const resolvedFields = computed<ResolvedField[]>(() => {
     if (rawOptions && typeof rawOptions === 'object') {
       if ('options' in rawOptions) {
         // Format: { options: [...], placeholder?: string, rows?: number }
+        let optionsArray = rawOptions.options
+        // Fallback: parse if options is a string
+        if (typeof optionsArray === 'string') {
+          try { optionsArray = JSON.parse(optionsArray) } catch { optionsArray = [] }
+        }
         resolvedOptions = {
-          options: Array.isArray(rawOptions.options) ? rawOptions.options : [],
+          options: Array.isArray(optionsArray) ? optionsArray : [],
           placeholder: (rawOptions as any).placeholder,
           rows: (rawOptions as any).rows,
         }
