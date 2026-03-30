@@ -22,6 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ChartGeneratorTool {
 
+    private final ChartResultCache chartResultCache;
+
+    public ChartGeneratorTool(ChartResultCache chartResultCache) {
+        this.chartResultCache = chartResultCache;
+    }
+
     // Default color palette
     private static final List<String> DEFAULT_COLORS = List.of(
         "#5470c6", "#91cc75", "#fac858", "#ee6666", "#73c0de",
@@ -93,10 +99,24 @@ public class ChartGeneratorTool {
     }
 
     /**
-     * Format ECharts option as A2UI Chart component JSON
+     * Format ECharts option as A2UI Chart component JSON and cache it
      */
     private String formatAsA2uiChartComponent(Map<String, Object> option) {
         String componentId = "chart_" + System.currentTimeMillis();
+
+        // Create the A2UI component message
+        com.a2ui.backend.protocol.model.ComponentMessage chartMessage =
+            com.a2ui.backend.protocol.model.ComponentMessage.append(
+                "main",
+                componentId,
+                com.a2ui.backend.protocol.model.ComponentSpec.of("Chart", Map.of("option", option))
+            );
+
+        // Cache the message for direct output
+        chartResultCache.addChartMessage(chartMessage);
+        log.info("Chart component cached: componentId={}", componentId);
+
+        // Return JSON string for LLM (it will see this as context)
         Map<String, Object> component = Map.of(
             "type", "component",
             "surfaceId", "main",
