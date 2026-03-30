@@ -7,8 +7,8 @@
 
     <!-- Bottom Navigation -->
     <van-tabbar v-model="activeTab" fixed @change="handleTabChange">
-      <van-tabbar-item name="streaming" icon="chat-o">
-        流式演示
+      <van-tabbar-item name="chat" icon="chat-o">
+        AI 聊天
       </van-tabbar-item>
       <van-tabbar-item name="chart" icon="bar-chart-o">
         图表演示

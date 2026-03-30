@@ -115,7 +115,7 @@ public class AgentCoordinator {
             "text_" + System.currentTimeMillis(),
             ComponentSpec.of("Text", Map.of(
                 "content", content,
-                "markdown", false
+                "markdown", true
             ))
         );
     }

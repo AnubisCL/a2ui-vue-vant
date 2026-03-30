@@ -36,7 +36,7 @@ public class ChartGeneratorTool {
      * @param dataJson  Data in JSON format (will be parsed)
      * @return JSON string containing ECharts option
      */
-    @Tool("Generate a chart from data")
+    @Tool("Generate a chart from data. Returns A2UI Chart component JSON that should be output directly.")
     public String generateChart(
         @P("Chart type: line, bar, pie, area, scatter") String chartType,
         @P("Chart title") String title,
@@ -88,7 +88,26 @@ public class ChartGeneratorTool {
         // Color palette
         option.put("color", DEFAULT_COLORS);
 
-        return formatAsJson(option);
+        // Return as A2UI Chart component - LLM should output this directly
+        return formatAsA2uiChartComponent(option);
+    }
+
+    /**
+     * Format ECharts option as A2UI Chart component JSON
+     */
+    private String formatAsA2uiChartComponent(Map<String, Object> option) {
+        String componentId = "chart_" + System.currentTimeMillis();
+        Map<String, Object> component = Map.of(
+            "type", "component",
+            "surfaceId", "main",
+            "componentId", componentId,
+            "component", Map.of(
+                "type", "Chart",
+                "props", Map.of("option", option)
+            ),
+            "position", "append"
+        );
+        return formatAsJson(component);
     }
 
     /**
@@ -174,7 +193,7 @@ public class ChartGeneratorTool {
 
         option.put("series", series);
 
-        return formatAsJson(option);
+        return formatAsA2uiChartComponent(option);
     }
 
     /**
@@ -244,7 +263,7 @@ public class ChartGeneratorTool {
 
         option.put("color", DEFAULT_COLORS);
 
-        return formatAsJson(option);
+        return formatAsA2uiChartComponent(option);
     }
 
     /**

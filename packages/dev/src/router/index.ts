@@ -3,15 +3,15 @@
  */
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import StreamingDemo from '../examples/StreamingDemo.vue'
+import ChatBox from '../examples/ChatBox.vue'
 import ChartExample from '../examples/ChartExample.vue'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'streaming',
-    component: StreamingDemo,
-    meta: { title: '流式演示' },
+    name: 'chat',
+    component: ChatBox,
+    meta: { title: 'AI 聊天' },
   },
   {
     path: '/chart',
@@ -29,7 +29,7 @@ const routes: RouteRecordRaw[] = [
     path: '/backend',
     name: 'backend',
     component: () => import('../examples/BackendDemo.vue'),
-    meta: { title: '后端对接演示' },
+    meta: { title: '后端对接' },
   },
 ]
 
